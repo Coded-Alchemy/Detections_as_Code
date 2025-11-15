@@ -1,0 +1,34 @@
+name: Build and Test Detections
+on:
+  push:
+    branches: ["main"]
+  pull_request: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install Sigma
+      run: |
+        pip3 install sigma-cli
+        sigma plugin install splunk
+
+    - name: Convert Sigma to SPL
+      run: | 
+        mkdir -p generated/splunk
+        sigma convert --target splunk --pipeline splunk_windows ./rules > generated/splunk/detections.spl
+
+    - name: Upload SPL as an artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: spl-detections
+        path: generated/splunk
