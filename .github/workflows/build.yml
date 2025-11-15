@@ -18,7 +18,9 @@ jobs:
         python-version: '3.11'
 
     - name: Install Sigma
-      run: pip3 install sigma-cli
+      run: |
+        pip3 install sigma-cli
+        sigma plugin install splunk
 
     - name: Convert Sigma to SPL
       run: | 
