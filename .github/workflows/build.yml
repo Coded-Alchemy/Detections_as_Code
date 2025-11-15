@@ -7,26 +7,22 @@ on:
 jobs:
   build:
     runs-on: self-hosted
-
+    
     steps:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12.9'
-
     - name: Install Sigma
       run: |
-        pip3 install sigma-cli
+        python3 -m pip install --upgrade pip
+        python3 -m pip install sigma-cli
         sigma plugin install splunk
-
+    
     - name: Convert Sigma to SPL
       run: | 
         mkdir -p generated/splunk
         sigma convert --target splunk --pipeline splunk_windows ./rules > generated/splunk/detections.spl
-
+    
     - name: Upload SPL as an artifact
       uses: actions/upload-artifact@v4
       with:
