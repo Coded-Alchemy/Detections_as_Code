@@ -21,17 +21,16 @@ jobs:
       run: |
         echo "Checking secrets..."
         if [ -z "${{ secrets.SPLUNK_URL }}" ]; then
-        echo "❌ ERROR: SPLUNK_URL secret is not set in GitHub!"
-        echo "Go to Settings → Secrets and variables → Actions"
-        exit 1
+          echo "ERROR: SPLUNK_URL secret is not set in GitHub!"
+          exit 1
         fi
         if [ -z "${{ secrets.SPLUNK_USERNAME }}" ]; then
-        echo "❌ ERROR: SPLUNK_USERNAME secret is not set!"
-        exit 1
+          echo "ERROR: SPLUNK_USERNAME secret is not set!"
+          exit 1
         fi
         if [ -z "${{ secrets.SPLUNK_PASSWORD }}" ]; then
-        echo "❌ ERROR: SPLUNK_PASSWORD secret is not set!"
-        exit 1
+          echo "ERROR: SPLUNK_PASSWORD secret is not set!"
+          exit 1
         fi
         echo "All secrets are configured"
 
