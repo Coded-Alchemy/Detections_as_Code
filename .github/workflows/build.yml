@@ -13,13 +13,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    # Setup Python
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12.9'
-
-      # Install and configure Sigma with Splunk plugin
+    # Install and configure Sigma with Splunk plugin
     - name: Install Sigma
       run: |
         python3 -m pip install --upgrade pip
@@ -31,7 +25,7 @@ jobs:
       run: | 
         mkdir -p generated/splunk
         sigma convert --target splunk --pipeline splunk_windows ./rules > generated/splunk/detections.spl
-
+    
     # Save SPL artifact with the name spl-detections to the generated/splunk directory
     - name: Upload SPL as an artifact
       uses: actions/upload-artifact@v4
