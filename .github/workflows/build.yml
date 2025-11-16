@@ -56,10 +56,20 @@ jobs:
     - name: Terraform Plan
       id: plan
       working-directory: terraform
+      env:
+        TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
+        TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
+        TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
+        TF_VAR_insecure_skip_verify: "true"
       run: terraform plan
 
     # Terraform apply (only on main branch)
     - name: Terraform Apply
       if: github.ref == 'refs/heads/main'
       working-directory: terraform
+      env:
+        TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
+        TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
+        TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
+        TF_VAR_insecure_skip_verify: "true"
       run: terraform apply -auto-approve
