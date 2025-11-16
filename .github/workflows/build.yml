@@ -41,6 +41,16 @@ jobs:
         name: spl-detections
         path: generated/splunk
 
+    # Debugging/Logging
+    - name: Debug Environment Variables
+      run: |
+        echo "Checking if secrets are set..."
+        echo "SPLUNK_URL is set: ${{ secrets.SPLUNK_URL != '' }}"
+        echo "SPLUNK_URL length: ${#TF_VAR_splunk_url}"
+        echo "First 10 chars of URL: ${TF_VAR_splunk_url:0:10}"
+      env:
+        TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
+
     # Install Terraform
     - name: Install Terraform
       uses: hashicorp/setup-terraform@v3
