@@ -8,6 +8,11 @@ jobs:
   build:
     runs-on: [self-hosted, linux, x64]
 
+    env:
+      SPLUNK_USERNAME: ${{ secrets.SPLUNK_USERNAME }}
+      SPLUNK_PASSWORD: ${{ secrets.SPLUNK_PASSWORD }}
+      SPLUNK_URL: ${{ secrets.SPLUNK_URL }}
+
     # Timeout to prevent hanging jobs
     timeout-minutes: 15
     
