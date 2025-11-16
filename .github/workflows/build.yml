@@ -7,29 +7,65 @@ on:
 jobs:
   build:
     runs-on: self-hosted
-
+    
     steps:
+    # Project Checkout
     - name: Checkout
       uses: actions/checkout@v4
 
+    # Setup Python
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.12.9'
 
+      # Install and configure Sigma with Splunk plugin
     - name: Install Sigma
       run: |
         python3 -m pip install --upgrade pip
         python3 -m pip install sigma-cli
         sigma plugin install splunk
 
+    # Convert Sigma rules into SPL(Splunk Search Processing Language)
     - name: Convert Sigma to SPL
       run: | 
         mkdir -p generated/splunk
         sigma convert --target splunk --pipeline splunk_windows ./rules > generated/splunk/detections.spl
 
+    # Save SPL artifact with the name spl-detections to the generated/splunk directory
     - name: Upload SPL as an artifact
       uses: actions/upload-artifact@v4
       with:
         name: spl-detections
         path: generated/splunk
+
+    # Install Terraform
+    - name: Install Terraform
+      uses: hashicorp/setup-terraform@v3
+
+    # Terraform formatting check
+    - name: Terraform Format
+      working-directory: terraform
+      run: terraform fmt -check
+
+    # Initialize Terraform
+    - name: Terraform Init
+      working-directory: terraform
+      run: terraform init
+
+    # Test Terraform before deployment
+    - name: Terraform Validate
+      working-directory: terraform
+      run: terraform validate
+
+    # Terraform plan
+    - name: Terraform Plan
+      id: plan
+      working-directory: terraform
+      run: terraform plan
+
+    # Terraform apply (only on main branch)
+    - name: Terraform Apply
+      if: github.ref == 'refs/heads/main'
+      working-directory: terraform
+      run: terraform apply -auto-approve
