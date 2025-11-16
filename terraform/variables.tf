@@ -20,3 +20,9 @@ variable "insecure_skip_verify" {
   type        = bool
   default     = false
 }
+
+variable "alert_email" {
+  description = "Email address for security alerts"
+  type        = string
+  default     = "security-team@example.com"
+}

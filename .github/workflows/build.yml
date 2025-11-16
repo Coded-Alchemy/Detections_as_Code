@@ -6,12 +6,43 @@ on:
 
 jobs:
   build:
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux, x64]
+
+    env:
+      SPLUNK_USERNAME: ${{ secrets.SPLUNK_USERNAME }}
+      SPLUNK_PASSWORD: ${{ secrets.SPLUNK_PASSWORD }}
+      SPLUNK_URL: ${{ secrets.SPLUNK_URL }}
+
+    # Timeout to prevent hanging jobs
+    timeout-minutes: 15
     
     steps:
     # Project Checkout
     - name: Checkout
       uses: actions/checkout@v4
+
+    # Verify secrets exist before continuing
+    - name: Verify Required Secrets
+      run: |
+        echo "Checking secrets..."
+        if [ -z "${{ secrets.SPLUNK_URL }}" ]; then
+          echo "ERROR: SPLUNK_URL secret is not set in GitHub!"
+          exit 1
+        fi
+        if [ -z "${{ secrets.SPLUNK_USERNAME }}" ]; then
+          echo "ERROR: SPLUNK_USERNAME secret is not set!"
+          exit 1
+        fi
+        if [ -z "${{ secrets.SPLUNK_PASSWORD }}" ]; then
+          echo "ERROR: SPLUNK_PASSWORD secret is not set!"
+          exit 1
+        fi
+        echo "All secrets are configured"
+
+    # Clean workspace before starting
+    - name: Clean Workspace
+      run: |
+        rm -rf generated/
 
     # Install and configure Sigma with Splunk plugin
     - name: Install Sigma
@@ -32,6 +63,16 @@ jobs:
       with:
         name: spl-detections
         path: generated/splunk
+
+    # Debugging/Logging
+    - name: Debug Environment Variables
+      run: |
+        echo "Checking if secrets are set..."
+        echo "SPLUNK_URL is set: ${{ secrets.SPLUNK_URL != '' }}"
+        echo "SPLUNK_URL length: ${#TF_VAR_splunk_url}"
+        echo "First 10 chars of URL: ${TF_VAR_splunk_url:0:10}"
+      env:
+        TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
 
     # Install Terraform
     - name: Install Terraform
@@ -60,6 +101,7 @@ jobs:
         TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
         TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
         TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
+        TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
         TF_VAR_insecure_skip_verify: "true"
       run: terraform plan
 
@@ -71,5 +113,13 @@ jobs:
         TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
         TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
         TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
+        TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
         TF_VAR_insecure_skip_verify: "true"
       run: terraform apply -auto-approve
+
+    # Clean up
+    - name: Cleanup
+      if: always()
+      run: |
+       rm -rf generated/
+       rm -rf .terraform/
