@@ -1,4 +1,10 @@
 title: Windows Defender Threat Detection Disabled
+author: Taji Abdullah
+date: 2025-11-16
+modified: 2025-11-16
+description: This rule detects Windows Defender disabling.
+status: test
+id:
 logsource:
   # Windows Defender
   product: windows
