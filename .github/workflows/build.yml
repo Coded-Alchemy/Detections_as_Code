@@ -60,6 +60,7 @@ jobs:
         TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
         TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
         TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
+        TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
         TF_VAR_insecure_skip_verify: "true"
       run: terraform plan
 
@@ -71,5 +72,6 @@ jobs:
         TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
         TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
         TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
+        TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
         TF_VAR_insecure_skip_verify: "true"
       run: terraform apply -auto-approve
