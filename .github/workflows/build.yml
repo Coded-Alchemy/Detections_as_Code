@@ -6,12 +6,20 @@ on:
 
 jobs:
   build:
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux, security-pipeline]
+
+    # Timeout to prevent hanging jobs
+    timeout-minutes: 15
     
     steps:
     # Project Checkout
     - name: Checkout
       uses: actions/checkout@v4
+
+    # Clean workspace before starting
+    - name: Clean Workspace
+      run: |
+        rm -rf generated/
 
     # Install and configure Sigma with Splunk plugin
     - name: Install Sigma
@@ -75,3 +83,10 @@ jobs:
         TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
         TF_VAR_insecure_skip_verify: "true"
       run: terraform apply -auto-approve
+
+    # Clean up
+    - name: Cleanup
+      if: always()
+      run: |
+       rm -rf generated/
+       rm -rf .terraform/
