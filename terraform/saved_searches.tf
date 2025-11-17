@@ -48,7 +48,7 @@ resource "splunk_saved_searches" "detections" {
   is_visible   = true
 
   # Set priority based on severity
-  schedule_priority = each.value.alert_severity == "critical" || each.value.alert_severity == "high" ? "highest" : "default"
+   schedule_priority = each.value.alert_severity == "critical" || each.value.alert_severity == "high" ? "highest" : "default"
 
   # ============================================
   # Metadata (optional but helpful)
