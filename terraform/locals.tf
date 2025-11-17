@@ -3,7 +3,7 @@ locals {
     # Windows Defender Disabled
     windows_defender_disabled = {
       name                       = "Windows Defender Threat Detection Disabled"
-      search                     = file("${path.module}/../generated/splunk/detections.spl")
+      spl_file                   = "windows_defender_disabled.spl"
       description                = "Detects when Windows Defender threat detection is disabled (EventIDs: 5001, 5010, 5012, 5101)"
       cron_schedule              = "*/5 * * * *"
       dispatch_earliest_time     = "-15m"
@@ -18,8 +18,6 @@ locals {
 
         Please investigate immediately.
       EOT
-      is_scheduled               = true
-      is_visible                 = true
     }
 
     # Suspicious PowerShell Activity
@@ -32,8 +30,6 @@ locals {
       dispatch_latest_time      = "now"
       alert_threshold           = "0"
       alert_severity            = "medium"
-      is_scheduled               = true
-      is_visible                 = true
       action_email_subject      = "ALERT: Suspicious PowerShell Activity Detected"
       action_email_message_alert = <<-EOT
         Suspicious PowerShell Activity Detected.
@@ -47,10 +43,4 @@ locals {
       EOT
     }
   }
-
-  # Common settings
-  actions           = "email"
-  alert_type        = "number of events"
-  alert_comparator  = "greater than"
-  action_email_to   = var.alert_email
 }
