@@ -61,7 +61,7 @@ jobs:
             file_name=$(filename "$rule_file" .yml)
             echo "Converting $rule_file..."
             sigma convert --target splunk --pipeline splunk_windows "$rule_file" > "generated/splunk/${file_name}.spl"
-            echo "Created generated/splunk/${file_name}.spl
+            echo "Created generated/splunk/${file_name}.spl"
           fi
         done
         
