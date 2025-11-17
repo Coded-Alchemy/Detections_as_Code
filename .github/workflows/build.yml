@@ -55,7 +55,18 @@ jobs:
     - name: Convert Sigma to SPL
       run: | 
         mkdir -p generated/splunk
-        sigma convert --target splunk --pipeline splunk_windows ./rules > generated/splunk/detections.spl
+        
+        for rule_file in rules/*.yml; do
+          if [ -f "$rule_file" ]; then
+            file_name=$(filename "$rule_file" .yml)
+            echo "Converting $rule_file..."
+            sigma convert --target splunk --pipeline splunk_windows "$rule_file" > "generated/splunk/${file_name}.spl"
+            echo "Created generated/splunk/${file_name}.spl
+          fi
+        done
+        
+        echo "Generated files:"
+        ls -lh generated/splunk/
     
     # Save SPL artifact with the name spl-detections to the generated/splunk directory
     - name: Upload SPL as an artifact
