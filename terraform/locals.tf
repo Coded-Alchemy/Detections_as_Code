@@ -3,7 +3,7 @@ locals {
   # Detection Rules Configuration
   # ============================================
   # Add new rules by creating a new block below
-  # Each key should match your Sigma rule filename (without .yml)
+  # Each key should match the Sigma rule filename (without .yml)
 
   detection_rules = {
 
