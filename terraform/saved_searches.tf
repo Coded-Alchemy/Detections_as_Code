@@ -28,10 +28,10 @@ resource "splunk_saved_searches" "detections" {
   # ============================================
   # Alert Configuration
   # ============================================
-  alert_type       = local.alert_type
-  alert_comparator = local.alert_comparator
-  alert_threshold  = each.value.alert_threshold
-  alert_digest_mode = true  # Group multiple alerts together
+  alert_type        = local.alert_type
+  alert_comparator  = local.alert_comparator
+  alert_threshold   = each.value.alert_threshold
+  alert_digest_mode = true # Group multiple alerts together
 
   # ============================================
   # Email Alert Action

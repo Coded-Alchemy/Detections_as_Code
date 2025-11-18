@@ -14,13 +14,13 @@ locals {
       spl_file    = "windows_defender_disabled.spl"
 
       # Schedule: How often to run the search
-      cron_schedule          = "*/5 * * * *"    # Every 5 minutes
-      dispatch_earliest_time = "-15m"            # Look back 15 minutes
-      dispatch_latest_time   = "now"             # Until now
+      cron_schedule          = "*/5 * * * *" # Every 5 minutes
+      dispatch_earliest_time = "-15m"        # Look back 15 minutes
+      dispatch_latest_time   = "now"         # Until now
 
       # Alert settings
-      alert_threshold = "0"      # Alert if ANY events found
-      alert_severity  = "high"   # Priority level
+      alert_threshold = "0"    # Alert if ANY events found
+      alert_severity  = "high" # Priority level
 
       # Email configuration
       alert_email_subject = "ALERT: Windows Defender Threat Detection Disabled"
@@ -46,8 +46,8 @@ locals {
       spl_file    = "suspicious_powershell.spl"
 
       # Schedule
-      cron_schedule          = "*/10 * * * *"   # Every 10 minutes
-      dispatch_earliest_time = "-20m"            # Look back 20 minutes
+      cron_schedule          = "*/10 * * * *" # Every 10 minutes
+      dispatch_earliest_time = "-20m"         # Look back 20 minutes
       dispatch_latest_time   = "now"
 
       # Alert settings
@@ -80,12 +80,12 @@ locals {
       spl_file    = "failed_login_attempts.spl"
 
       # Schedule
-      cron_schedule          = "*/15 * * * *"   # Every 15 minutes
-      dispatch_earliest_time = "-30m"            # Look back 30 minutes
+      cron_schedule          = "*/15 * * * *" # Every 15 minutes
+      dispatch_earliest_time = "-30m"         # Look back 30 minutes
       dispatch_latest_time   = "now"
 
       # Alert settings
-      alert_threshold = "5"      # Alert if MORE than 5 failed attempts
+      alert_threshold = "5" # Alert if MORE than 5 failed attempts
       alert_severity  = "high"
 
       # Email configuration
