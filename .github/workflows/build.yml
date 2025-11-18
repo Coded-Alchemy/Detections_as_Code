@@ -194,7 +194,6 @@ jobs:
 
     # Terraform apply
     - name: Terraform Apply
-      if: github.ref == 'refs/heads/main'
       working-directory: terraform
       env:
         TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
