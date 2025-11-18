@@ -58,32 +58,48 @@ jobs:
         
         for rule_file in rules/*.yml; do
           if [ -f "$rule_file" ]; then
-            file_name=$(filename "$rule_file" .yml)
+            # FIX: Changed 'filename' to 'basename'
+            file_name=$(basename "$rule_file" .yml)
             echo "Converting $rule_file..."
             sigma convert --target splunk --pipeline splunk_windows "$rule_file" > "generated/splunk/${file_name}.spl"
             echo "Created generated/splunk/${file_name}.spl"
           fi
         done
         
-        echo "Generated files:"
+        echo ""
+        echo "=== Generated SPL Files ==="
         ls -lh generated/splunk/
-    
+        
+        echo ""
+        echo "=== Content Preview ==="
+        for spl_file in generated/splunk/*.spl; do
+          echo "File: $spl_file"
+          head -n 3 "$spl_file"
+          echo "---"
+        done
+
+    # ADDED: Verify SPL files exist before continuing
+    - name: Verify SPL Files Generated
+      run: |
+        if [ ! -d "generated/splunk" ]; then
+          echo "ERROR: generated/splunk directory does not exist!"
+          exit 1
+        fi
+        
+        file_count=$(ls -1 generated/splunk/*.spl 2>/dev/null | wc -l)
+        if [ "$file_count" -eq 0 ]; then
+          echo "ERROR: No SPL files were generated!"
+          exit 1
+        fi
+        
+        echo "Successfully generated $file_count SPL files"
+
     # Save SPL artifact with the name spl-detections to the generated/splunk directory
     - name: Upload SPL as an artifact
       uses: actions/upload-artifact@v4
       with:
         name: spl-detections
         path: generated/splunk
-
-    # Debugging/Logging
-    - name: Debug Environment Variables
-      run: |
-        echo "Checking if secrets are set..."
-        echo "SPLUNK_URL is set: ${{ secrets.SPLUNK_URL != '' }}"
-        echo "SPLUNK_URL length: ${#TF_VAR_splunk_url}"
-        echo "First 10 chars of URL: ${TF_VAR_splunk_url:0:10}"
-      env:
-        TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
 
     # Install Terraform
     - name: Install Terraform
@@ -97,12 +113,40 @@ jobs:
     # Initialize Terraform
     - name: Terraform Init
       working-directory: terraform
+      env:
+        TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
+        TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
+        TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
+        TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
+        TF_VAR_insecure_skip_verify: "true"
       run: terraform init
 
     # Test Terraform before deployment
     - name: Terraform Validate
       working-directory: terraform
+      env:
+        TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
+        TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
+        TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
+        TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
+        TF_VAR_insecure_skip_verify: "true"
       run: terraform validate
+
+    # Verify SPL files accessible from terraform directory
+    - name: Verify SPL Files from Terraform Directory
+      working-directory: terraform
+      run: |
+        echo "Checking SPL files from terraform directory..."
+        ls -la ../generated/splunk/ || echo "Cannot access SPL files!"
+        
+        # Check each expected file
+        for rule in windows_defender_disabled suspicious_powershell failed_login_attempts; do
+          if [ -f "../generated/splunk/${rule}.spl" ]; then
+            echo "Found ${rule}.spl"
+          else
+            echo "Missing ${rule}.spl"
+          fi
+        done
 
     # Terraform plan
     - name: Terraform Plan
@@ -114,9 +158,11 @@ jobs:
         TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
         TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
         TF_VAR_insecure_skip_verify: "true"
-      run: terraform plan
+      run: |
+        terraform plan -out=tfplan
+        terraform show tfplan
 
-    # Terraform apply (only on main branch)
+    # Terraform apply
     - name: Terraform Apply
       if: github.ref == 'refs/heads/main'
       working-directory: terraform
@@ -126,11 +172,22 @@ jobs:
         TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
         TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
         TF_VAR_insecure_skip_verify: "true"
-      run: terraform apply -auto-approve
+      run: |
+        terraform apply tfplan
+        
+        echo "### Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Deployed Detection Rules:**" >> $GITHUB_STEP_SUMMARY
+        terraform output -json deployed_detections | jq -r 'to_entries[] | "- **\(.value.name)** (Severity: \(.value.severity))"' >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Total Rules Deployed:** $(terraform output -raw detection_count)" >> $GITHUB_STEP_SUMMARY
 
     # Clean up
     - name: Cleanup
       if: always()
       run: |
-       rm -rf generated/
-       rm -rf .terraform/
+        echo "Cleaning up temporary files..."
+        rm -rf generated/
+        rm -rf terraform/.terraform/
+        rm -f terraform/tfplan
+        rm -f terraform/terraform.tfstate.backup
