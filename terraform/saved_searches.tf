@@ -38,8 +38,8 @@ resource "splunk_saved_searches" "detections" {
   # ============================================
   actions                    = local.actions
   action_email_to            = var.alert_email
-  action_email_subject       = each.value.action_email_subject
-  action_email_message_alert = each.value.action_email_message_alert
+  action_email_subject       = each.value.alert_email_subject
+  action_email_message_alert = each.value.alert_email_message
 
   # ============================================
   # Enable and Priority Settings
@@ -48,7 +48,7 @@ resource "splunk_saved_searches" "detections" {
   is_visible   = true
 
   # Set priority based on severity
-   schedule_priority = each.value.alert_severity == "critical" || each.value.alert_severity == "high" ? "highest" : "default"
+  schedule_priority = each.value.alert_severity == "critical" || each.value.alert_severity == "high" ? "highest" : "default"
 
   # ============================================
   # Metadata (optional but helpful)
