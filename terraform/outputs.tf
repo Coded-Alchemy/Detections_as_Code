@@ -1,11 +1,16 @@
+# ============================================
+# Outputs for Deployed Detection Rules
+# ============================================
+
 output "deployed_detections" {
-  description = "Map of all deployed detection rules"
+  description = "Map of all deployed detection rules with details"
   value = {
     for key, search in splunk_saved_searches.detections : key => {
       name        = search.name
       id          = search.id
       description = search.description
       severity    = local.detection_rules[key].alert_severity
+      schedule    = local.detection_rules[key].cron_schedule
     }
   }
 }
@@ -15,18 +20,23 @@ output "detection_count" {
   value       = length(keys(splunk_saved_searches.detections))
 }
 
-output "high_severity_rules" {
-  description = "List of high severity detection rules"
-  value = [
-    for key, rule in local.detection_rules : rule.name
-    if lookup(rule, "alert_severity", "medium") == "high"
-  ]
+output "detection_names" {
+  description = "List of all deployed detection rule names"
+  value       = [for key, search in splunk_saved_searches.detections : search.name]
 }
 
-output "critical_severity_rules" {
-  description = "List of critical severity detection rules"
-  value = [
-    for key, rule in local.detection_rules : rule.name
-    if lookup(rule, "alert_severity", "medium") == "critical"
-  ]
+output "high_severity_count" {
+  description = "Number of high severity rules"
+  value = length([
+    for key, rule in local.detection_rules : key
+    if rule.alert_severity == "high"
+  ])
+}
+
+output "critical_severity_count" {
+  description = "Number of critical severity rules"
+  value = length([
+    for key, rule in local.detection_rules : key
+    if rule.alert_severity == "critical"
+  ])
 }
