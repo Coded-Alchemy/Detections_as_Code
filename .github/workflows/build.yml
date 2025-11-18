@@ -21,24 +21,6 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    # Verify secrets exist before continuing
-    - name: Verify Required Secrets
-      run: |
-        echo "Checking secrets..."
-        if [ -z "${{ secrets.SPLUNK_URL }}" ]; then
-          echo "ERROR: SPLUNK_URL secret is not set in GitHub!"
-          exit 1
-        fi
-        if [ -z "${{ secrets.SPLUNK_USERNAME }}" ]; then
-          echo "ERROR: SPLUNK_USERNAME secret is not set!"
-          exit 1
-        fi
-        if [ -z "${{ secrets.SPLUNK_PASSWORD }}" ]; then
-          echo "ERROR: SPLUNK_PASSWORD secret is not set!"
-          exit 1
-        fi
-        echo "All secrets are configured"
-
     # Clean workspace before starting
     - name: Clean Workspace
       run: |
@@ -54,75 +36,36 @@ jobs:
     # Convert Sigma rules into SPL
     - name: Convert Sigma to SPL
       run: | 
-        set -e  # Exit immediately if any command fails
+        set -e
         mkdir -p generated/splunk
         
-        echo "=== Converting Sigma rules to SPL ==="
+        echo "Converting Sigma rules to SPL..."
         rule_count=0
         
-        # Use find to search recursively through subdirectories
         while IFS= read -r rule_file; do
-          # Extract just the filename without path or extension
           file_name=$(basename "$rule_file" .yml)
           
-          echo ""
-          echo "Processing: $rule_file"
-          echo "Output: generated/splunk/${file_name}.spl"
-          
-          # Run conversion and capture output
           if sigma convert --target splunk --pipeline splunk_windows "$rule_file" > "generated/splunk/${file_name}.spl" 2>&1; then
-            # Check if file was created and has content
             if [ -s "generated/splunk/${file_name}.spl" ]; then
-              file_size=$(wc -c < "generated/splunk/${file_name}.spl")
-              echo "Success: ${file_name}.spl ($file_size bytes)"
+              echo "${file_name}.spl"
               rule_count=$((rule_count + 1))
             else
-              echo "File created but is empty!"
+              echo "${file_name}.spl is empty"
               exit 1
             fi
           else
-            echo "FAILED to convert $rule_file"
-            cat "generated/splunk/${file_name}.spl" 2>/dev/null || echo "No output"
+            echo "Failed to convert $rule_file"
             exit 1
           fi
         done < <(find rules -type f -name "*.yml")
         
         if [ "$rule_count" -eq 0 ]; then
-          echo ""
-          echo "ERROR: No rules were converted!"
+          echo "ERROR: No rules converted"
           exit 1
         fi
         
-        echo ""
-        echo "=== Summary: Converted $rule_count rule(s) ==="
+        echo "Converted $rule_count rule(s)"
         ls -lh generated/splunk/
-        
-        echo ""
-        echo "=== SPL Content Preview ==="
-        for spl_file in generated/splunk/*.spl; do
-          if [ -f "$spl_file" ]; then
-            echo "┌─ $(basename "$spl_file") ─┐"
-            head -n 2 "$spl_file"
-            echo "└────────────────────────────┘"
-            echo ""
-          fi
-        done
-
-    # ADDED: Verify SPL files exist before continuing
-    - name: Verify SPL Files Generated
-      run: |
-        if [ ! -d "generated/splunk" ]; then
-          echo "ERROR: generated/splunk directory does not exist!"
-          exit 1
-        fi
-        
-        file_count=$(ls -1 generated/splunk/*.spl 2>/dev/null | wc -l)
-        if [ "$file_count" -eq 0 ]; then
-          echo "ERROR: No SPL files were generated!"
-          exit 1
-        fi
-        
-        echo "Successfully generated $file_count SPL files"
 
     # Save SPL artifact with the name spl-detections to the generated/splunk directory
     - name: Upload SPL as an artifact
@@ -161,22 +104,6 @@ jobs:
         TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
         TF_VAR_insecure_skip_verify: "true"
       run: terraform validate
-
-    # Verify SPL files accessible from terraform directory
-    - name: Verify SPL Files from Terraform Directory
-      working-directory: terraform
-      run: |
-        echo "Checking SPL files from terraform directory..."
-        ls -la ../generated/splunk/ || echo "Cannot access SPL files!"
-        
-        # Check each expected file
-        for rule in windows_defender_disabled suspicious_powershell failed_login_attempts; do
-          if [ -f "../generated/splunk/${rule}.spl" ]; then
-            echo "Found ${rule}.spl"
-          else
-            echo "Missing ${rule}.spl"
-          fi
-        done
 
     # Terraform plan
     - name: Terraform Plan
