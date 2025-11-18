@@ -138,3 +138,11 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "**Total Rules Deployed:** $(terraform output -raw detection_count)" >> $GITHUB_STEP_SUMMARY
 
+# Clean up
+    - name: Cleanup
+      if: always()
+      run: |
+        echo "Cleaning up temporary files..."
+        rm -rf terraform/.terraform/
+        rm -f terraform/tfplan
+        rm -f terraform/terraform.tfstate.backup
