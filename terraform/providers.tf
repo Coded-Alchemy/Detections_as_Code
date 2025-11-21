@@ -1,3 +1,8 @@
+  # ============================================
+  # Terraform Providers Configuration
+  # ============================================
+
+
 terraform {
   required_providers {
     splunk = {
