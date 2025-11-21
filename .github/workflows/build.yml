@@ -14,7 +14,7 @@ jobs:
       SPLUNK_URL: ${{ secrets.SPLUNK_URL }}
 
     # Timeout to prevent hanging jobs
-    timeout-minutes: 15
+    # timeout-minutes: 15
     
     steps:
     # Project Checkout
