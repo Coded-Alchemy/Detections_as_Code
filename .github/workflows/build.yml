@@ -27,11 +27,11 @@ jobs:
         rm -rf generated/
 
     # Install and configure Sigma with Splunk plugin
-    - name: Install Sigma
-      run: |
-        python3 -m pip install --upgrade pip
-        python3 -m pip install sigma-cli
-        sigma plugin install splunk
+    #- name: Install Sigma
+    #  run: |
+    #    python3 -m pip install --upgrade pip
+    #    python3 -m pip install sigma-cli
+    #    sigma plugin install splunk
 
     # Convert Sigma rules into SPL
     - name: Convert Sigma to SPL
@@ -75,8 +75,8 @@ jobs:
         path: generated/splunk
 
     # Install Terraform
-    - name: Install Terraform
-      uses: hashicorp/setup-terraform@v3
+    #- name: Install Terraform
+    #  uses: hashicorp/setup-terraform@v3
 
     # Terraform formatting check
     - name: Terraform Format
