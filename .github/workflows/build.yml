@@ -73,6 +73,10 @@ jobs:
       with:
         name: spl-detections
         path: generated/splunk
+        includeHiddenFiles: false
+        if-no-files-found: warn
+        compression-level: 6
+        continue-on-error: true
 
     # Install Terraform
     - name: Install Terraform
