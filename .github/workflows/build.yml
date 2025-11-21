@@ -83,7 +83,7 @@ jobs:
     # Terraform formatting check
     - name: Terraform Format
       working-directory: terraform
-      run: terraform fmt -check
+      run: terraform fmt -recursive
 
     # Initialize Terraform
     - name: Terraform Init
