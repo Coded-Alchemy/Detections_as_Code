@@ -79,8 +79,8 @@ jobs:
         continue-on-error: true
 
     # Install Terraform
-    - name: Install Terraform
-      uses: hashicorp/setup-terraform@v3
+    #- name: Install Terraform
+    #  uses: hashicorp/setup-terraform@v3
 
     # Terraform formatting check
     - name: Terraform Format
