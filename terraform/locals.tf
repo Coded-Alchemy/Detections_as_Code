@@ -1,11 +1,77 @@
-locals {
-  # ============================================
+# ============================================
   # Detection Rules Configuration
   # ============================================
   # Add new rules by creating a new block below
   # Each key should match the Sigma rule filename (without .yml)
 
+locals {
+
   detection_rules = {
+
+    # ============================================
+    # Common Alert Settings
+    # ============================================
+    # These apply to ALL detection rules
+
+    actions          = "email"
+    alert_type       = "number of events"
+    alert_comparator = "greater than"
+
+    # Create a simple map for severity lookups
+    severity_map = {
+      for key, rule in local.detection_rules : key => rule.alert_severity
+    }
+
+    # ============================================
+    # Cron Schedule Examples (for reference)
+    # ============================================
+    # */5 * * * *    = Every 5 minutes
+    # */10 * * * *   = Every 10 minutes
+    # */15 * * * *   = Every 15 minutes
+    # */30 * * * *   = Every 30 minutes
+    # 0 * * * *      = Every hour
+    # 0 */2 * * *    = Every 2 hours
+    # 0 0 * * *      = Once per day at midnight
+
+    # ============================================
+    # Time Window Examples (for reference)
+    # ============================================
+    # -5m   = Last 5 minutes
+    # -15m  = Last 15 minutes
+    # -30m  = Last 30 minutes
+    # -1h   = Last 1 hour
+    # -4h   = Last 4 hours
+    # -24h  = Last 24 hours
+    # -7d   = Last 7 days
+
+
+
+
+
+
+    # ============================================
+    # ADD NEW RULES BELOW
+    # ============================================
+    # Template for adding a new rule:
+    #
+    # rule_name = {
+    #   name        = "Rule Display Name"
+    #   description = "What this rule detects"
+    #   spl_file    = "rule_name.spl"
+    #
+    #   cron_schedule          = "*/10 * * * *"
+    #   dispatch_earliest_time = "-20m"
+    #   dispatch_latest_time   = "now"
+    #
+    #   alert_threshold = "0"
+    #   alert_severity  = "medium"
+    #
+    #   alert_email_subject = "ALERT: Your Alert Subject"
+    #   alert_email_message = <<-EOT
+    #     Your detailed alert message here.
+    #     Can span multiple lines.
+    #   EOT
+    # }
 
     # Rule 1: Windows Defender Disabled
     windows_defender_disabled = {
@@ -104,65 +170,8 @@ locals {
       EOT
     }
 
-    # ============================================
-    # ADD NEW RULES BELOW THIS LINE
-    # ============================================
-    # Template for adding a new rule:
-    #
-    # rule_name = {
-    #   name        = "Rule Display Name"
-    #   description = "What this rule detects"
-    #   spl_file    = "rule_name.spl"
-    #
-    #   cron_schedule          = "*/10 * * * *"
-    #   dispatch_earliest_time = "-20m"
-    #   dispatch_latest_time   = "now"
-    #
-    #   alert_threshold = "0"
-    #   alert_severity  = "medium"
-    #
-    #   alert_email_subject = "ALERT: Your Alert Subject"
-    #   alert_email_message = <<-EOT
-    #     Your detailed alert message here.
-    #     Can span multiple lines.
-    #   EOT
-    # }
+
+
 
   }
-
-  # ============================================
-  # Common Alert Settings
-  # ============================================
-  # These apply to ALL detection rules
-
-  actions          = "email"
-  alert_type       = "number of events"
-  alert_comparator = "greater than"
-
-  # Create a simple map for severity lookups
-  severity_map = {
-    for key, rule in local.detection_rules : key => rule.alert_severity
-  }
-
-  # ============================================
-  # Cron Schedule Examples (for reference)
-  # ============================================
-  # */5 * * * *    = Every 5 minutes
-  # */10 * * * *   = Every 10 minutes
-  # */15 * * * *   = Every 15 minutes
-  # */30 * * * *   = Every 30 minutes
-  # 0 * * * *      = Every hour
-  # 0 */2 * * *    = Every 2 hours
-  # 0 0 * * *      = Once per day at midnight
-
-  # ============================================
-  # Time Window Examples (for reference)
-  # ============================================
-  # -5m   = Last 5 minutes
-  # -15m  = Last 15 minutes
-  # -30m  = Last 30 minutes
-  # -1h   = Last 1 hour
-  # -4h   = Last 4 hours
-  # -24h  = Last 24 hours
-  # -7d   = Last 7 days
 }

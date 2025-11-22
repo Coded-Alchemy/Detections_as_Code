@@ -1,3 +1,8 @@
+# ============================================
+# Github Actions build file
+# ============================================
+# This file describes the CI/CD automation steps.
+
 name: Build and Test Detections
 on:
   push:

@@ -1,7 +1,7 @@
-  # ============================================
-  # Github secret variables
-  # ============================================
-  # These variables are used for Github secrets.
+# ============================================
+# Github secret variables
+# ============================================
+# These variables are used for Github secrets.
 
 variable "splunk_url" {
   description = "Splunk instance URL"
