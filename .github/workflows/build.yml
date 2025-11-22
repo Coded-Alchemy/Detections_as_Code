@@ -100,7 +100,7 @@ jobs:
         TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
         TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
         TF_VAR_insecure_skip_verify: "true"
-      run: terraform init
+      run: terraform init -reconfigure
 
     # Test Terraform before deployment
     - name: Terraform Validate
@@ -146,7 +146,7 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "**Total Rules Deployed:** $(terraform output -raw detection_count)" >> $GITHUB_STEP_SUMMARY
 
-# Clean up
+    # Clean up
     - name: Cleanup
       if: always()
       run: |
