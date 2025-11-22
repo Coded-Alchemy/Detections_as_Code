@@ -10,6 +10,7 @@
 resource "splunk_saved_searches" "detections" {
   # Create one resource for each detection rule
   for_each = local.detection_rules
+  skip_on_conflict = true
 
   # Basic information
   name        = each.value.name
