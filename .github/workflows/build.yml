@@ -6,8 +6,9 @@
 name: Build and Test Detections
 on:
   push:
-    branches: ["main"]
-  pull_request: {}
+    branches: ["main", "dev"]
+  pull_request:
+    branches: ["main", "dev"]
 
 jobs:
   build:
