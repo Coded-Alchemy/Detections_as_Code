@@ -1,8 +1,14 @@
+# ============================================
+# Github Actions build file
+# ============================================
+# This file describes the CI/CD automation steps.
+
 name: Build and Test Detections
 on:
   push:
-    branches: ["main"]
-  pull_request: {}
+    branches: ["main", "dev"]
+  pull_request:
+    branches: ["main", "dev"]
 
 jobs:
   build:
@@ -21,76 +27,90 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    # Verify secrets exist before continuing
-    - name: Verify Required Secrets
-      run: |
-        echo "Checking secrets..."
-        if [ -z "${{ secrets.SPLUNK_URL }}" ]; then
-          echo "ERROR: SPLUNK_URL secret is not set in GitHub!"
-          exit 1
-        fi
-        if [ -z "${{ secrets.SPLUNK_USERNAME }}" ]; then
-          echo "ERROR: SPLUNK_USERNAME secret is not set!"
-          exit 1
-        fi
-        if [ -z "${{ secrets.SPLUNK_PASSWORD }}" ]; then
-          echo "ERROR: SPLUNK_PASSWORD secret is not set!"
-          exit 1
-        fi
-        echo "All secrets are configured"
-
     # Clean workspace before starting
     - name: Clean Workspace
       run: |
         rm -rf generated/
 
     # Install and configure Sigma with Splunk plugin
-    - name: Install Sigma
-      run: |
-        python3 -m pip install --upgrade pip
-        python3 -m pip install sigma-cli
-        sigma plugin install splunk
+    #- name: Install Sigma
+    #  run: |
+    #    python3 -m pip install --upgrade pip
+    #    python3 -m pip install sigma-cli
+    #    sigma plugin install splunk
 
-    # Convert Sigma rules into SPL(Splunk Search Processing Language)
+    # Convert Sigma rules into SPL
     - name: Convert Sigma to SPL
       run: | 
+        set -e
         mkdir -p generated/splunk
-        sigma convert --target splunk --pipeline splunk_windows ./rules > generated/splunk/detections.spl
-    
+        
+        echo "Converting Sigma rules to SPL..."
+        rule_count=0
+        
+        while IFS= read -r rule_file; do
+          file_name=$(basename "$rule_file" .yml)
+          
+          if sigma convert --target splunk --pipeline splunk_windows "$rule_file" > "generated/splunk/${file_name}.spl" 2>&1; then
+            if [ -s "generated/splunk/${file_name}.spl" ]; then
+              echo "${file_name}.spl"
+              rule_count=$((rule_count + 1))
+            else
+              echo "${file_name}.spl is empty"
+              exit 1
+            fi
+          else
+            echo "Failed to convert $rule_file"
+            exit 1
+          fi
+        done < <(find rules -type f -name "*.yml")
+        
+        if [ "$rule_count" -eq 0 ]; then
+          echo "ERROR: No rules converted"
+          exit 1
+        fi
+        
+        echo "Converted $rule_count rule(s)"
+        ls -lh generated/splunk/
+
     # Save SPL artifact with the name spl-detections to the generated/splunk directory
     - name: Upload SPL as an artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v4.3.1
       with:
         name: spl-detections
         path: generated/splunk
-
-    # Debugging/Logging
-    - name: Debug Environment Variables
-      run: |
-        echo "Checking if secrets are set..."
-        echo "SPLUNK_URL is set: ${{ secrets.SPLUNK_URL != '' }}"
-        echo "SPLUNK_URL length: ${#TF_VAR_splunk_url}"
-        echo "First 10 chars of URL: ${TF_VAR_splunk_url:0:10}"
-      env:
-        TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
+        if-no-files-found: warn
+        compression-level: 6
 
     # Install Terraform
-    - name: Install Terraform
-      uses: hashicorp/setup-terraform@v3
+    #- name: Install Terraform
+    #  uses: hashicorp/setup-terraform@v3
 
-    # Terraform formatting check
+    # Terraform formatting
     - name: Terraform Format
       working-directory: terraform
-      run: terraform fmt -check
+      run: terraform fmt -recursive
 
     # Initialize Terraform
     - name: Terraform Init
       working-directory: terraform
-      run: terraform init
+      env:
+        TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
+        TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
+        TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
+        TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
+        TF_VAR_insecure_skip_verify: "true"
+      run: terraform init -reconfigure
 
     # Test Terraform before deployment
     - name: Terraform Validate
       working-directory: terraform
+      env:
+        TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
+        TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
+        TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
+        TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
+        TF_VAR_insecure_skip_verify: "true"
       run: terraform validate
 
     # Terraform plan
@@ -103,11 +123,12 @@ jobs:
         TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
         TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
         TF_VAR_insecure_skip_verify: "true"
-      run: terraform plan
+      run: |
+        terraform plan -out=tfplan
+        terraform show tfplan
 
-    # Terraform apply (only on main branch)
+    # Terraform apply
     - name: Terraform Apply
-      if: github.ref == 'refs/heads/main'
       working-directory: terraform
       env:
         TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
@@ -115,11 +136,21 @@ jobs:
         TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
         TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
         TF_VAR_insecure_skip_verify: "true"
-      run: terraform apply -auto-approve
+      run: |
+        terraform apply tfplan
+        
+        echo "### Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Deployed Detection Rules:**" >> $GITHUB_STEP_SUMMARY
+        terraform output -json deployed_detections | jq -r 'to_entries[] | "- **\(.value.name)** (Severity: \(.value.severity))"' >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Total Rules Deployed:** $(terraform output -raw detection_count)" >> $GITHUB_STEP_SUMMARY
 
     # Clean up
     - name: Cleanup
       if: always()
       run: |
-       rm -rf generated/
-       rm -rf .terraform/
+        echo "Cleaning up temporary files..."
+        rm -rf terraform/.terraform/
+        rm -f terraform/tfplan
+        rm -f terraform/terraform.tfstate.backup
