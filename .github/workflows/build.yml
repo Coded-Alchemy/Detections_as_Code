@@ -80,7 +80,7 @@ jobs:
     #- name: Install Terraform
     #  uses: hashicorp/setup-terraform@v3
 
-    # Terraform formatting check
+    # Terraform formatting
     - name: Terraform Format
       working-directory: terraform
       run: terraform fmt -recursive
