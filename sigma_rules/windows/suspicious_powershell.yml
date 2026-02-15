@@ -1,23 +1,48 @@
 title: Suspicious PowerShell Execution
-description: This rule detects suspicious powershell activity.
-id:
+id: f4b3c5d6-e7a8-4b9c-0d1e-2f3a4b5c6d7e
+status: test
+description: Detects PowerShell commands with obfuscation, encoding, or download capabilities.
+references:
+    - https://attack.mitre.org/techniques/T1059/001/
 author: Taji Abdullah
 date: 2025-11-16
-modified: 2025-11-16
-status: test
-
+modified: 2026-02-15
+tags:
+    - attack.execution
+    - attack.t1059.001
 logsource:
-  product: windows
-  service: powershell
+    product: windows
+    category: ps_script
+    definition: 'Requirements: Script Block Logging must be enabled'
 detection:
-  selection:
-    EventID:
-      - 4103 # Module logging
-      - 4104 # Script Block Logging
-  keywords:
-    - 'bypass'
-    - 'hidden'
-    - 'encodedcommand'
-    - 'invoke-expression'
-    - 'downloadstring'
-  condition: selection and keywords
+    selection_encoding:
+        ScriptBlockText|contains:
+            - '-enc'
+            - '-encodedcommand'
+            - '-e '
+            - 'FromBase64String'
+    selection_download:
+        ScriptBlockText|contains:
+            - 'downloadstring'
+            - 'downloadfile'
+            - 'Net.WebClient'
+            - 'Start-BitsTransfer'
+            - 'Invoke-WebRequest'
+            - 'Invoke-RestMethod'
+    selection_execution:
+        ScriptBlockText|contains:
+            - 'invoke-expression'
+            - 'iex '
+            - 'Invoke-Command'
+    selection_bypass:
+        ScriptBlockText|contains:
+            - '-ExecutionPolicy Bypass'
+            - '-ep bypass'
+            - '-windowstyle hidden'
+            - '-w hidden'
+    condition: 1 of selection_*
+falsepositives:
+    - Legitimate administrative scripts
+    - Software deployment tools
+    - Automation scripts
+level: high
