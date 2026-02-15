@@ -1,0 +1,37 @@
+# T1018 - Remote System Discovery
+
+title: Network Reconnaissance
+id: f3a4b5c6-d7e8-9f0a-1b2c-3d4e5f6a7b8c
+status: stable
+description: Detects reconnaissance activities to discover remote systems
+references:
+    - https://attack.mitre.org/techniques/T1018/
+author: Taji Abdullah
+date: 2026-02-15
+tags:
+    - attack.discovery
+    - attack.t1018
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_net:
+        CommandLine|contains:
+            - 'net view'
+            - 'net share'
+    selection_network:
+        CommandLine|contains:
+            - 'ping -n'
+            - 'nslookup'
+            - 'arp -a'
+    selection_domain:
+        CommandLine|contains:
+            - 'nltest'
+            - 'dsquery'
+            - 'net group "domain computers"'
+    condition: 1 of selection_*
+falsepositives:
+    - Network troubleshooting
+    - System administration
+    - Automated scripts
+level: medium
