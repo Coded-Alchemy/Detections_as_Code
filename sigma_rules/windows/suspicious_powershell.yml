@@ -1,0 +1,23 @@
+title: Suspicious PowerShell Execution
+description: This rule detects suspicious powershell activity.
+id:
+author: Taji Abdullah
+date: 2025-11-16
+modified: 2025-11-16
+status: test
+
+logsource:
+  product: windows
+  service: powershell
+detection:
+  selection:
+    EventID:
+      - 4103 # Module logging
+      - 4104 # Script Block Logging
+  keywords:
+    - 'bypass'
+    - 'hidden'
+    - 'encodedcommand'
+    - 'invoke-expression'
+    - 'downloadstring'
+  condition: selection and keywords
