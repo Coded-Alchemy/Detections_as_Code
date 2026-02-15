@@ -1,0 +1,33 @@
+# T1113 - Screen Capture
+
+title: Screen Capture Tools Execution
+id: f9a0b1c2-d3e4-5f6a-7b8c-9d0e1f2a3b4c
+status: experimental
+description: Detects execution of screen capture utilities
+references:
+    - https://attack.mitre.org/techniques/T1113/
+author: Taji Abdullah
+date: 2026-02-15
+tags:
+    - attack.collection
+    - attack.t1113
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_tool:
+        Image|contains:
+            - '\SnippingTool.exe'
+            - '\ScreenCapture.exe'
+    selection_powershell:
+        CommandLine|contains:
+            - 'screenshot'
+            - 'screen capture'
+            - 'System.Drawing.Bitmap'
+            - '[Windows.Forms.Screen]'
+    condition: selection_tool or selection_powershell
+falsepositives:
+    - Legitimate screenshot tools
+    - Documentation creation
+    - Troubleshooting activities
+level: low
