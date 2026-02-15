@@ -1,0 +1,30 @@
+# T1021.002 - Remote Services: SMB/Windows Admin Shares
+
+title: Lateral Movement via Admin Shares
+id: c6d7e8f9-a0b1-2c3d-4e5f-6a7b8c9d0e1f
+status: stable
+description: Detects access to administrative shares for lateral movement
+references:
+    - https://attack.mitre.org/techniques/T1021/002/
+author: Taji Abdullah
+date: 2026-02-15
+tags:
+    - attack.lateral_movement
+    - attack.t1021.002
+logsource:
+    product: windows
+    service: security
+detection:
+    selection:
+        EventID: 5140
+    selection_share:
+        ShareName:
+            - '\\*\C$'
+            - '\\*\ADMIN$'
+            - '\\*\IPC$'
+    condition: selection and selection_share
+falsepositives:
+    - System administration
+    - Backup software
+    - Security scanning
+level: high
