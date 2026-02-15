@@ -1,0 +1,27 @@
+# T1558.003 - Steal or Forge Kerberos Tickets: Kerberoasting
+
+title: Kerberoasting Activity
+id: d1e2f3a4-b5c6-7d8e-9f0a-1b2c3d4e5f6a
+status: stable
+description: Detects potential Kerberoasting attacks through RC4 ticket requests
+references:
+    - https://attack.mitre.org/techniques/T1558/003/
+author: Taji Abdullah
+date: 2026-02-15
+tags:
+    - attack.credential_access
+    - attack.t1558.003
+logsource:
+    product: windows
+    service: security
+detection:
+    selection:
+        EventID: 4769
+        TicketEncryptionType: '0x17'
+    filter_computername:
+        ServiceName|endswith: '$'
+    condition: selection and not filter_computername
+falsepositives:
+    - Legacy applications using RC4
+    - Old service accounts
+level: high
