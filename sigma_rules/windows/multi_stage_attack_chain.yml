@@ -1,0 +1,40 @@
+title: Potential Multi-Stage Attack Chain
+id: d3e4f5a6-b7c8-9d0e-1f2a-3b4c5d6e7f8a
+status: experimental
+description: Correlates multiple suspicious activities from the same source
+references:
+    - https://attack.mitre.org/
+author: Taji Abdullah
+date: 2026-02-15
+tags:
+    - attack.execution
+    - attack.persistence
+    - attack.privilege_escalation
+    - attack.defense_evasion
+    - attack.credential_access
+    - attack.discovery
+    - attack.lateral_movement
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_execution:
+        Image|endswith:
+            - '\powershell.exe'
+            - '\cmd.exe'
+    selection_discovery:
+        CommandLine|contains:
+            - 'whoami'
+            - 'net user'
+            - 'net group'
+    selection_credential:
+        CommandLine|contains:
+            - 'mimikatz'
+            - 'sekurlsa'
+    timeframe: 1h
+    condition: (selection_execution and selection_discovery) or selection_credential
+falsepositives:
+    - Intensive administrative sessions
+    - Security testing
+    - Penetration testing
+level: critical
