@@ -1,0 +1,32 @@
+# Lateral Movement
+
+# T1021.001 - Remote Services: Remote Desktop Protocol
+
+title: Unusual RDP Connection
+id: b5c6d7e8-f9a0-1b2c-3d4e-5f6a7b8c9d0e
+status: stable
+description: Detects suspicious RDP connections
+references:
+    - https://attack.mitre.org/techniques/T1021/001/
+author: Taji Abdullah
+date: 2026-02-15
+tags:
+    - attack.lateral_movement
+    - attack.t1021.001
+logsource:
+    product: windows
+    service: security
+detection:
+    selection_success:
+        EventID: 4624
+        LogonType: 10
+    selection_failure:
+        EventID: 4625
+        LogonType: 10
+    timeframe: 1h
+    condition: (selection_success or selection_failure) | count(ComputerName) by IpAddress > 5
+falsepositives:
+    - IT administrators
+    - Jump servers
+    - Remote support tools
+level: medium
