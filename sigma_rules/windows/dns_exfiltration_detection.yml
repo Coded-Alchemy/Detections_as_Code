@@ -1,3 +1,5 @@
+# T1048.003 - Exfiltration Over Alternative Protocol: DNS
+
 title: Data Exfiltration via DNS
 id: b1c2d3e4-f5a6-7b8c-9d0e-1f2a3b4c5d6e
 status: experimental
