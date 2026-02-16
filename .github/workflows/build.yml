@@ -141,47 +141,29 @@ jobs:
           exit 0
         fi
         
-        echo "Found existing searches in Splunk:"
-        echo "$EXISTING"
-        echo ""
-        
-        # Save to temp file
+        echo "Found existing searches in Splunk"
         echo "$EXISTING" > /tmp/existing_searches.txt
         
-        # Get detection rules from Terraform
-        terraform console > /tmp/tf_rules.json 2>/dev/null <<EOF
-        jsonencode({
-          for k, v in local.detection_rules : k => v.name
-        })
-        EOF
+        # Parse locals.tf using Python
+        python3 ../scripts/import_existing.py > /tmp/tf_rules.txt
         
         # Import matching searches
-        if [ -f /tmp/tf_rules.json ]; then
-          jq -r 'to_entries[] | "\(.key)|\(.value)"' /tmp/tf_rules.json 2>/dev/null | while IFS='|' read -r key name; do
-            # Check if exists in Splunk
-            if grep -Fxq "$name" /tmp/existing_searches.txt; then
-              echo "Importing: $name (key: $key)"
-              
-              # Check if already in state
-              if terraform state show "splunk_saved_searches.detections[\"$key\"]" >/dev/null 2>&1; then
-                echo "  ✓ Already in Terraform state"
-              else
-                # Import the resource
-                if terraform import "splunk_saved_searches.detections[\"$key\"]" "$name" 2>&1; then
-                  echo "  ✓ Successfully imported"
-                else
-                  echo "  ✗ Import failed (will skip)"
-                fi
-              fi
+        while IFS='|' read -r key name; do
+          if grep -Fxq "$name" /tmp/existing_searches.txt; then
+            echo "Importing: $name (key: $key)"
+            
+            if terraform state show "splunk_saved_searches.detections[\"$key\"]" >/dev/null 2>&1; then
+              echo "  ✓ Already in state"
             else
-              echo "Skipping (not in Splunk): $name (key: $key)"
+              terraform import "splunk_saved_searches.detections[\"$key\"]" "$name" 2>&1 || echo "  ✗ Failed"
             fi
-          done
-        fi
+          else
+            echo "Not in Splunk: $name (will be created)"
+          fi
+        done < /tmp/tf_rules.txt
         
-        rm -f /tmp/existing_searches.txt /tmp/tf_rules.json
-        echo ""
-        echo "Import process complete"
+        rm -f /tmp/existing_searches.txt /tmp/tf_rules.txt
+        echo "Import complete"
       continue-on-error: true
 
     # Test Terraform before deployment
