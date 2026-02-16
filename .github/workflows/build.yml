@@ -63,7 +63,7 @@ jobs:
             echo "Failed to convert $rule_file"
             exit 1
           fi
-        done < <(find rules -type f -name "*.yml")
+        done < <(find sigma_rules -type f -name "*.yml")
         
         if [ "$rule_count" -eq 0 ]; then
           echo "ERROR: No rules converted"
