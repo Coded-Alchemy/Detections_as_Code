@@ -1,5 +1,5 @@
 # ============================================
-# Github Actions build file
+# GitHub Actions build file
 # ============================================
 # This file describes the CI/CD automation steps.
 
@@ -119,6 +119,50 @@ jobs:
         TF_VAR_insecure_skip_verify: "true"
       run: terraform init -reconfigure
 
+    # Pre-cleanup: Remove any broken state entries BEFORE import
+    - name: Pre-Cleanup Broken State Entries
+      working-directory: terraform
+      run: |
+        echo "Pre-cleanup: Checking for broken state entries..."
+        
+        # List all detection resources
+        STATE_RESOURCES=$(terraform state list 2>/dev/null | grep 'splunk_saved_searches.detections' || echo "")
+        
+        if [ -z "$STATE_RESOURCES" ]; then
+          echo "No resources in state"
+          exit 0
+        fi
+        
+        echo "Found resources in state:"
+        echo "$STATE_RESOURCES"
+        echo ""
+        
+        # Try to read each resource, remove if it fails
+        echo "$STATE_RESOURCES" | while read -r resource; do
+          echo "Testing: $resource"
+          
+          # Capture both stdout and stderr
+          if terraform state show "$resource" >/tmp/test_output.txt 2>&1; then
+            # Check if output contains error messages
+            if grep -qi "error\|404\|not found\|invalid" /tmp/test_output.txt; then
+              echo "  ✗ Contains errors, removing..."
+              terraform state rm "$resource" 2>&1 || true
+            else
+              echo "  ✓ OK"
+            fi
+          else
+            echo "  ✗ Failed to read, removing..."
+            terraform state rm "$resource" 2>&1 || true
+          fi
+        done
+        
+        rm -f /tmp/test_output.txt
+        
+        echo ""
+        echo "Pre-cleanup complete. Remaining resources:"
+        terraform state list | grep 'splunk_saved_searches.detections' || echo "  (none)"
+      continue-on-error: true
+
     # Import Terraform resources
     - name: Import Existing Splunk Saved Searches
       working-directory: terraform
@@ -198,7 +242,6 @@ jobs:
       run: |
         echo "Checking for stale resources in Terraform state..."
         
-        # Get list of saved searches in state
         STATE_RESOURCES=$(terraform state list | grep 'splunk_saved_searches.detections' || echo "")
         
         if [ -z "$STATE_RESOURCES" ]; then
@@ -206,38 +249,74 @@ jobs:
           exit 0
         fi
         
+        echo "Resources currently in Terraform state:"
+        echo "$STATE_RESOURCES"
+        echo ""
+        
         # Get existing searches from Splunk
         EXISTING=$(curl -k -s -u "${{ secrets.SPLUNK_USERNAME }}:${{ secrets.SPLUNK_PASSWORD }}" \
           "${{ secrets.SPLUNK_URL }}/services/saved/searches?output_mode=json&count=0" \
           | jq -r '.entry[].name' 2>/dev/null || echo "")
         
+        if [ -z "$EXISTING" ]; then
+          echo "Warning: Could not fetch saved searches from Splunk"
+          exit 0
+        fi
+        
+        echo "Saved searches currently in Splunk:"
+        echo "$EXISTING"
+        echo ""
+        
         echo "$EXISTING" > /tmp/existing_searches.txt
         
         # Check each resource in state
         echo "$STATE_RESOURCES" | while read -r resource; do
-          echo "Checking: $resource"
+          echo "Validating: $resource"
+          
+          # Try to show the resource - if this fails, it's corrupt
+          if ! terraform state show "$resource" >/tmp/state_output.txt 2>&1; then
+            echo "  ✗ Cannot read resource from state (corrupted), removing..."
+            terraform state rm "$resource" 2>&1 || true
+            continue
+          fi
+          
+          # Check if the state show output contains an error
+          if grep -q "404 Not Found" /tmp/state_output.txt 2>/dev/null; then
+            echo "  ✗ Resource returns 404 error, removing from state..."
+            terraform state rm "$resource" 2>&1 || true
+            continue
+          fi
           
           # Extract the resource name from state
-          RESOURCE_NAME=$(terraform state show "$resource" 2>/dev/null | grep -m 1 'name ' | awk -F'"' '{print $2}' || echo "")
+          RESOURCE_NAME=$(grep -m 1 '^[[:space:]]*name[[:space:]]*=' /tmp/state_output.txt | sed 's/.*= "\(.*\)"/\1/' || echo "")
           
-          if [ -n "$RESOURCE_NAME" ]; then
-            # Check if it exists in Splunk
-            if grep -Fxq "$RESOURCE_NAME" /tmp/existing_searches.txt; then
-              echo "  ✓ Resource exists in Splunk"
-            else
-              echo "  ✗ Resource not found in Splunk, removing from state"
-              terraform state rm "$resource" || true
-            fi
+          if [ -z "$RESOURCE_NAME" ]; then
+            echo "  ⚠ Could not determine resource name, skipping validation"
+            continue
+          fi
+          
+          echo "  → Resource name: '$RESOURCE_NAME'"
+          
+          # Check if it exists in Splunk
+          if grep -Fxq "$RESOURCE_NAME" /tmp/existing_searches.txt; then
+            echo "  ✓ Resource exists in Splunk"
           else
-            echo "  ⚠ Could not determine resource name, skipping"
+            echo "  ✗ Resource NOT found in Splunk, removing from state..."
+            terraform state rm "$resource" 2>&1 || true
           fi
         done
         
-        rm -f /tmp/existing_searches.txt
+        rm -f /tmp/existing_searches.txt /tmp/state_output.txt
+        echo ""
         echo "State cleanup complete"
+        
+        # Show final state
+        echo ""
+        echo "Remaining resources in state:"
+        terraform state list | grep 'splunk_saved_searches.detections' || echo "  (none)"
       continue-on-error: true
 
-    # Refresh Terraform state
+    # Refresh Terraform state with error recovery
     - name: Terraform Refresh
       working-directory: terraform
       env:
@@ -248,7 +327,48 @@ jobs:
         TF_VAR_insecure_skip_verify: "true"
       run: |
         echo "Refreshing Terraform state..."
-        terraform apply -refresh-only -auto-approve || echo "Refresh completed with warnings"
+        
+        # Attempt refresh
+        if terraform apply -refresh-only -auto-approve 2>&1 | tee /tmp/refresh_output.txt; then
+          echo "✓ Refresh completed successfully"
+        else
+          echo "⚠ Refresh encountered errors, analyzing..."
+          
+          # Extract resource names that caused errors (looking for 404 errors)
+          FAILED_RESOURCES=$(grep -o 'splunk_saved_searches\.detections\["[^"]*"\]' /tmp/refresh_output.txt | sort -u || echo "")
+          
+          if [ -n "$FAILED_RESOURCES" ]; then
+            echo "Removing resources that failed during refresh:"
+            echo "$FAILED_RESOURCES"
+            
+            echo "$FAILED_RESOURCES" | while read -r resource; do
+              if [ -n "$resource" ]; then
+                echo "  Removing: $resource"
+                terraform state rm "$resource" 2>&1 || true
+              fi
+            done
+            
+            echo ""
+            echo "Retrying refresh after cleanup..."
+            terraform apply -refresh-only -auto-approve 2>&1 || echo "Refresh completed with remaining warnings"
+          else
+            echo "Could not identify specific failing resources"
+            echo "Attempting to remove all resources that can't be read..."
+            
+            # Last resort: check each resource individually
+            terraform state list | grep 'splunk_saved_searches.detections' | while read -r resource; do
+              if ! terraform state show "$resource" >/dev/null 2>&1; then
+                echo "  Removing unreadable resource: $resource"
+                terraform state rm "$resource" || true
+              fi
+            done
+            
+            terraform apply -refresh-only -auto-approve || echo "Refresh completed with warnings"
+          fi
+        fi
+        
+        rm -f /tmp/refresh_output.txt
+        echo "Refresh process complete"
       continue-on-error: true
 
     # Test Terraform before deployment
