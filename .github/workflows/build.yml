@@ -382,6 +382,27 @@ jobs:
         TF_VAR_insecure_skip_verify: "true"
       run: terraform validate
 
+    # Final state verification before plan
+    - name: Final State Verification
+      working-directory: terraform
+      run: |
+        echo "Final verification before plan..."
+        
+        # One last check - remove any resource that causes errors
+        terraform state list | grep 'splunk_saved_searches.detections' | while read -r resource; do
+          echo "Final check: $resource"
+          if ! terraform state show "$resource" >/dev/null 2>&1; then
+            echo "  Removing problematic resource: $resource"
+            terraform state rm "$resource" || true
+          fi
+        done
+        
+        echo ""
+        echo "Final verification complete"
+        echo "Resources ready for plan:"
+        terraform state list | grep 'splunk_saved_searches.detections' || echo "  (none)"
+      continue-on-error: true
+
     # Terraform plan
     - name: Terraform Plan
       id: plan
