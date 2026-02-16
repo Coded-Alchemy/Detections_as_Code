@@ -1,0 +1,7 @@
+
+
+
+
+macros:
+  - name: firewall_index
+    definition: index=pfsense sourcetype=pfsense:filterlog
