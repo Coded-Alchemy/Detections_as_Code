@@ -1,0 +1,36 @@
+# T1566.001 - Phishing: Spearphishing Attachment
+
+title: Suspicious Email Attachment Execution
+id: 3e3c3e89-1a3f-4f1e-9c3d-1e4a5c6d7e8f
+status: stable
+description: Detects execution of files from email attachment directories with suspicious extensions
+references:
+    - https://attack.mitre.org/techniques/T1566/001/
+author: Taji Abdullah
+date: 2026-02-15
+modified: 2026-02-15
+tags:
+    - attack.initial_access
+    - attack.t1566.001
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_location:
+        Image|contains:
+            - '\Outlook\'
+            - '\Temp\'
+            - '\Downloads\'
+    selection_extension:
+        Image|endswith:
+            - '.exe'
+            - '.scr'
+            - '.com'
+            - '.bat'
+            - '.cmd'
+            - '.pif'
+    condition: selection_location and selection_extension
+falsepositives:
+    - Legitimate software installations from downloads folder
+    - User-initiated executable downloads
+level: high

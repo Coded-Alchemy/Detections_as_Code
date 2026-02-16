@@ -1,0 +1,39 @@
+# T1059.003 - Command and Scripting Interpreter: Windows Command Shell
+
+title: Suspicious Command Shell Activity
+id: 5e4d3c2b-1a0f-9e8d-7c6b-5a4e3d2c1b0a
+status: test
+description: Detects suspicious cmd.exe usage including reconnaissance and lateral movement commands
+references:
+    - https://attack.mitre.org/techniques/T1059/003/
+author: Taji Abdullah
+date: 2026-02-15
+tags:
+    - attack.execution
+    - attack.t1059.003
+    - attack.discovery
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_cmd:
+        Image|endswith: '\cmd.exe'
+    selection_commands:
+        CommandLine|contains:
+            - 'net user'
+            - 'net group'
+            - 'net localgroup'
+            - 'whoami'
+            - 'ipconfig'
+            - 'systeminfo'
+            - 'tasklist'
+            - 'netstat'
+            - 'wmic'
+            - 'reg query'
+            - 'quser'
+    condition: selection_cmd and selection_commands
+falsepositives:
+    - IT administration activities
+    - Troubleshooting scripts
+    - System monitoring tools
+level: medium

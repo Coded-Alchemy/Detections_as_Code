@@ -63,7 +63,7 @@ jobs:
             echo "Failed to convert $rule_file"
             exit 1
           fi
-        done < <(find rules -type f -name "*.yml")
+        done < <(find sigma_rules -type f -name "*.yml")
         
         if [ "$rule_count" -eq 0 ]; then
           echo "ERROR: No rules converted"
@@ -101,6 +101,51 @@ jobs:
         TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
         TF_VAR_insecure_skip_verify: "true"
       run: terraform init -reconfigure
+
+    # Import Terraform resources
+    - name: Import Existing Splunk Saved Searches
+      working-directory: terraform
+      env:
+        TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
+        TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
+        TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
+        TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
+        TF_VAR_insecure_skip_verify: "true"
+      run: |
+        echo "Checking for existing saved searches to import..."
+        
+        # Extract all detection rule keys and names from locals.tf
+        detection_keys=$(grep -A 50 'detection_rules = {' locals.tf | grep -E '^\s+\w+\s*=' | awk '{print $1}' | grep -v '{' || echo "")
+        
+        if [ -z "$detection_keys" ]; then
+          echo "No detection rules found in locals.tf"
+          exit 0
+        fi
+        
+        # For each detection rule, try to import if it exists in Splunk
+        for key in $detection_keys; do
+          # Get the rule name from locals.tf
+          rule_name=$(grep -A 20 "$key\s*=" locals.tf | grep 'name\s*=' | head -1 | sed 's/.*name\s*=\s*"\(.*\)".*/\1/' || echo "")
+          
+          if [ -n "$rule_name" ]; then
+            echo "Attempting to import: $rule_name (key: $key)"
+            
+            # Check if already in state
+            if terraform state show "splunk_saved_searches.detections[\"$key\"]" >/dev/null 2>&1; then
+              echo "  Already in state, skipping"
+            else
+              # Try to import (ignore errors if doesn't exist in Splunk)
+              if terraform import "splunk_saved_searches.detections[\"$key\"]" "$rule_name" 2>&1; then
+                echo "  Successfully imported"
+              else
+                echo "  Does not exist in Splunk yet, will be created"
+              fi
+            fi
+          fi
+        done
+        
+        echo "Import process complete"
+      continue-on-error: true
 
     # Test Terraform before deployment
     - name: Terraform Validate

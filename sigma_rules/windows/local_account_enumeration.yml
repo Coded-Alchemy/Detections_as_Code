@@ -1,0 +1,35 @@
+# T1087.001 - Account Discovery: Local Account
+
+title: Local Account Enumeration
+id: e2f3a4b5-c6d7-8e9f-0a1b-2c3d4e5f6a7b
+status: stable
+description: Detects enumeration of local accounts on systems
+references:
+    - https://attack.mitre.org/techniques/T1087/001/
+author: Taji Abdullah
+date: 2026-02-15
+tags:
+    - attack.discovery
+    - attack.t1087.001
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_net:
+        CommandLine|contains:
+            - 'net user'
+            - 'net localgroup'
+    selection_powershell:
+        CommandLine|contains:
+            - 'Get-LocalUser'
+            - 'Get-LocalGroupMember'
+            - 'Get-LocalGroup'
+    selection_wmic:
+        CommandLine|contains:
+            - 'wmic useraccount'
+    condition: 1 of selection_*
+falsepositives:
+    - IT administration
+    - Inventory tools
+    - System management scripts
+level: medium

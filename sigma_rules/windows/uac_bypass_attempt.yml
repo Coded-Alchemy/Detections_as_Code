@@ -1,0 +1,35 @@
+# T1548.002 - Abuse Elevation Control Mechanism: Bypass UAC
+
+title: UAC Bypass Attempt
+id: c4d5e6f7-a8b9-0c1d-2e3f-4a5b6c7d8e9f
+status: stable
+description: Detects known UAC bypass techniques
+references:
+    - https://attack.mitre.org/techniques/T1548/002/
+author: Taji Abdullah
+date: 2026-02-15
+date: 2024-02-15
+tags:
+    - attack.privilege_escalation
+    - attack.defense_evasion
+    - attack.t1548.002
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_process:
+        Image|endswith:
+            - '\fodhelper.exe'
+            - '\computerdefaults.exe'
+            - '\sdclt.exe'
+            - '\eventvwr.exe'
+            - '\slui.exe'
+    selection_commandline:
+        CommandLine|contains:
+            - 'ms-settings'
+            - 'control.exe'
+    condition: selection_process or selection_commandline
+falsepositives:
+    - Legitimate system operations
+    - Administrative tools
+level: high

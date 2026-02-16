@@ -16,7 +16,7 @@ resource "splunk_saved_searches" "detections" {
   description = each.value.description
 
   # The SPL search query - reads from generated file
-  search = file("${path.module}/../generated/splunk/${each.value.spl_file}")
+  search = try(file("${path.module}/../generated/splunk/${each.value.spl_file}"), "")
 
   # ============================================
   # Schedule Configuration
