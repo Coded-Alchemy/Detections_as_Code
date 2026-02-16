@@ -253,7 +253,8 @@ jobs:
         echo "$STATE_RESOURCES"
         echo ""
         
-        # Get existing searches from Splunk
+        # Get existing searches from Splunk (as a simple list of names)
+        echo "Fetching saved searches from Splunk..."
         EXISTING=$(curl -k -s -u "${{ secrets.SPLUNK_USERNAME }}:${{ secrets.SPLUNK_PASSWORD }}" \
           "${{ secrets.SPLUNK_URL }}/services/saved/searches?output_mode=json&count=0" \
           | jq -r '.entry[].name' 2>/dev/null || echo "")
@@ -270,45 +271,41 @@ jobs:
         echo "$EXISTING" > /tmp/existing_searches.txt
         
         # Check each resource in state
+        REMOVED_COUNT=0
         echo "$STATE_RESOURCES" | while read -r resource; do
           echo "Validating: $resource"
           
-          # Try to show the resource - if this fails, it's corrupt
-          if ! terraform state show "$resource" >/tmp/state_output.txt 2>&1; then
-            echo "  ✗ Cannot read resource from state (corrupted), removing..."
+          # Extract resource ID (which is the saved search name)
+          RESOURCE_ID=$(terraform state show "$resource" 2>/dev/null | grep '^id ' | awk -F'"' '{print $2}' || echo "")
+          
+          if [ -z "$RESOURCE_ID" ]; then
+            echo "  ⚠ Could not determine resource ID"
+            # Try getting name instead
+            RESOURCE_ID=$(terraform state show "$resource" 2>/dev/null | grep -m 1 '^[[:space:]]*name[[:space:]]*=' | sed 's/.*= "\(.*\)"/\1/' || echo "")
+          fi
+          
+          if [ -z "$RESOURCE_ID" ]; then
+            echo "  ✗ Cannot determine resource identifier, removing..."
             terraform state rm "$resource" 2>&1 || true
+            REMOVED_COUNT=$((REMOVED_COUNT + 1))
             continue
           fi
           
-          # Check if the state show output contains an error
-          if grep -q "404 Not Found" /tmp/state_output.txt 2>/dev/null; then
-            echo "  ✗ Resource returns 404 error, removing from state..."
-            terraform state rm "$resource" 2>&1 || true
-            continue
-          fi
+          echo "  → Resource ID/Name: '$RESOURCE_ID'"
           
-          # Extract the resource name from state
-          RESOURCE_NAME=$(grep -m 1 '^[[:space:]]*name[[:space:]]*=' /tmp/state_output.txt | sed 's/.*= "\(.*\)"/\1/' || echo "")
-          
-          if [ -z "$RESOURCE_NAME" ]; then
-            echo "  ⚠ Could not determine resource name, skipping validation"
-            continue
-          fi
-          
-          echo "  → Resource name: '$RESOURCE_NAME'"
-          
-          # Check if it exists in Splunk
-          if grep -Fxq "$RESOURCE_NAME" /tmp/existing_searches.txt; then
+          # Check if it exists in Splunk by exact name match
+          if grep -Fxq "$RESOURCE_ID" /tmp/existing_searches.txt; then
             echo "  ✓ Resource exists in Splunk"
           else
             echo "  ✗ Resource NOT found in Splunk, removing from state..."
             terraform state rm "$resource" 2>&1 || true
+            REMOVED_COUNT=$((REMOVED_COUNT + 1))
           fi
         done
         
-        rm -f /tmp/existing_searches.txt /tmp/state_output.txt
+        rm -f /tmp/existing_searches.txt
         echo ""
-        echo "State cleanup complete"
+        echo "State cleanup complete (removed $REMOVED_COUNT resource(s))"
         
         # Show final state
         echo ""
@@ -316,8 +313,8 @@ jobs:
         terraform state list | grep 'splunk_saved_searches.detections' || echo "  (none)"
       continue-on-error: true
 
-    # Refresh Terraform state with error recovery
-    - name: Terraform Refresh
+    # Validate each resource exists in Splunk
+    - name: Validate Resources Against Splunk
       working-directory: terraform
       env:
         TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
@@ -326,121 +323,17 @@ jobs:
         TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
         TF_VAR_insecure_skip_verify: "true"
       run: |
-        echo "Refreshing Terraform state..."
+        echo "Validating each resource exists in Splunk..."
         
-        # Attempt refresh
-        if terraform apply -refresh-only -auto-approve 2>&1 | tee /tmp/refresh_output.txt; then
-          echo "✓ Refresh completed successfully"
-        else
-          echo "⚠ Refresh encountered errors, analyzing..."
-          
-          # Extract resource names that caused errors (looking for 404 errors)
-          FAILED_RESOURCES=$(grep -o 'splunk_saved_searches\.detections\["[^"]*"\]' /tmp/refresh_output.txt | sort -u || echo "")
-          
-          if [ -n "$FAILED_RESOURCES" ]; then
-            echo "Removing resources that failed during refresh:"
-            echo "$FAILED_RESOURCES"
-            
-            echo "$FAILED_RESOURCES" | while read -r resource; do
-              if [ -n "$resource" ]; then
-                echo "  Removing: $resource"
-                terraform state rm "$resource" 2>&1 || true
-              fi
-            done
-            
-            echo ""
-            echo "Retrying refresh after cleanup..."
-            terraform apply -refresh-only -auto-approve 2>&1 || echo "Refresh completed with remaining warnings"
-          else
-            echo "Could not identify specific failing resources"
-            echo "Attempting to remove all resources that can't be read..."
-            
-            # Last resort: check each resource individually
-            terraform state list | grep 'splunk_saved_searches.detections' | while read -r resource; do
-              if ! terraform state show "$resource" >/dev/null 2>&1; then
-                echo "  Removing unreadable resource: $resource"
-                terraform state rm "$resource" || true
-              fi
-            done
-            
-            terraform apply -refresh-only -auto-approve || echo "Refresh completed with warnings"
-          fi
+        STATE_RESOURCES=$(terraform state list | grep 'splunk_saved_searches.detections' || echo "")
+        
+        if [ -z "$STATE_RESOURCES" ]; then
+          echo "No resources to validate"
+          exit 0
         fi
         
-        rm -f /tmp/refresh_output.txt
-        echo "Refresh process complete"
-      continue-on-error: true
-
-    # Test Terraform before deployment
-    - name: Terraform Validate
-      working-directory: terraform
-      env:
-        TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
-        TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
-        TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
-        TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
-        TF_VAR_insecure_skip_verify: "true"
-      run: terraform validate
-
-    # Final state verification before plan
-    - name: Final State Verification
-      working-directory: terraform
-      run: |
-        echo "Final verification before plan..."
-        
-        # One last check - remove any resource that causes errors
-        terraform state list | grep 'splunk_saved_searches.detections' | while read -r resource; do
-          echo "Final check: $resource"
-          if ! terraform state show "$resource" >/dev/null 2>&1; then
-            echo "  Removing problematic resource: $resource"
-            terraform state rm "$resource" || true
-          fi
-        done
-        
-        echo ""
-        echo "Final verification complete"
-        echo "Resources ready for plan:"
-        terraform state list | grep 'splunk_saved_searches.detections' || echo "  (none)"
-      continue-on-error: true
-
-    # Terraform plan
-    - name: Terraform Plan
-      id: plan
-      working-directory: terraform
-      env:
-        TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
-        TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
-        TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
-        TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
-        TF_VAR_insecure_skip_verify: "true"
-      run: |
-        terraform plan -out=tfplan
-        terraform show tfplan
-
-    # Terraform apply
-    - name: Terraform Apply
-      working-directory: terraform
-      env:
-        TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
-        TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
-        TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
-        TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
-        TF_VAR_insecure_skip_verify: "true"
-      run: |
-        terraform apply tfplan
-        
-        echo "### Deployment Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Deployed Detection Rules:**" >> $GITHUB_STEP_SUMMARY
-        terraform output -json deployed_detections | jq -r 'to_entries[] | "- **\(.value.name)** (Severity: \(.value.severity))"' >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Total Rules Deployed:** $(terraform output -raw detection_count)" >> $GITHUB_STEP_SUMMARY
-
-    # Clean up
-    - name: Cleanup
-      if: always()
-      run: |
-        echo "Cleaning up temporary files..."
-        rm -rf terraform/.terraform/
-        rm -f terraform/tfplan
-        rm -f terraform/terraform.tfstate.backup
+        echo "$STATE_RESOURCES" | while read -r resource; do
+          echo "Checking: $resource"
+          
+          # Get the saved search name from state
+          SEARCH_NAME=$(terraform state show "$resource" 2>/dev/null | grep -m 1 '^[[:space:]]*name[[:space:]]*=' | sed 's/.*= "\(.*\)"/\1/' || echo "")
