@@ -129,38 +129,58 @@ jobs:
         TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
         TF_VAR_insecure_skip_verify: "true"
       run: |
-        echo "Checking for existing saved searches to import..."
+        echo "Importing existing saved searches from Splunk..."
         
-        # Extract all detection rule keys and names from locals.tf
-        detection_keys=$(grep -A 50 'detection_rules = {' locals.tf | grep -E '^\s+\w+\s*=' | awk '{print $1}' | grep -v '{' || echo "")
+        # Get existing searches from Splunk
+        EXISTING=$(curl -k -s -u "${{ secrets.SPLUNK_USERNAME }}:${{ secrets.SPLUNK_PASSWORD }}" \
+          "${{ secrets.SPLUNK_URL }}/services/saved/searches?output_mode=json&count=0" \
+          | jq -r '.entry[].name' 2>/dev/null || echo "")
         
-        if [ -z "$detection_keys" ]; then
-          echo "No detection rules found in locals.tf"
+        if [ -z "$EXISTING" ]; then
+          echo "No existing searches found - skipping import"
           exit 0
         fi
         
-        # For each detection rule, try to import if it exists in Splunk
-        for key in $detection_keys; do
-          # Get the rule name from locals.tf
-          rule_name=$(grep -A 20 "$key\s*=" locals.tf | grep 'name\s*=' | head -1 | sed 's/.*name\s*=\s*"\(.*\)".*/\1/' || echo "")
-          
-          if [ -n "$rule_name" ]; then
-            echo "Attempting to import: $rule_name (key: $key)"
-            
-            # Check if already in state
-            if terraform state show "splunk_saved_searches.detections[\"$key\"]" >/dev/null 2>&1; then
-              echo "  Already in state, skipping"
-            else
-              # Try to import (ignore errors if doesn't exist in Splunk)
-              if terraform import "splunk_saved_searches.detections[\"$key\"]" "$rule_name" 2>&1; then
-                echo "  Successfully imported"
-              else
-                echo "  Does not exist in Splunk yet, will be created"
-              fi
-            fi
-          fi
-        done
+        echo "Found existing searches in Splunk:"
+        echo "$EXISTING"
+        echo ""
         
+        # Save to temp file
+        echo "$EXISTING" > /tmp/existing_searches.txt
+        
+        # Get detection rules from Terraform
+        terraform console > /tmp/tf_rules.json 2>/dev/null <<EOF
+        jsonencode({
+          for k, v in local.detection_rules : k => v.name
+        })
+        EOF
+        
+        # Import matching searches
+        if [ -f /tmp/tf_rules.json ]; then
+          jq -r 'to_entries[] | "\(.key)|\(.value)"' /tmp/tf_rules.json 2>/dev/null | while IFS='|' read -r key name; do
+            # Check if exists in Splunk
+            if grep -Fxq "$name" /tmp/existing_searches.txt; then
+              echo "Importing: $name (key: $key)"
+              
+              # Check if already in state
+              if terraform state show "splunk_saved_searches.detections[\"$key\"]" >/dev/null 2>&1; then
+                echo "  ✓ Already in Terraform state"
+              else
+                # Import the resource
+                if terraform import "splunk_saved_searches.detections[\"$key\"]" "$name" 2>&1; then
+                  echo "  ✓ Successfully imported"
+                else
+                  echo "  ✗ Import failed (will skip)"
+                fi
+              fi
+            else
+              echo "Skipping (not in Splunk): $name (key: $key)"
+            fi
+          done
+        fi
+        
+        rm -f /tmp/existing_searches.txt /tmp/tf_rules.json
+        echo ""
         echo "Import process complete"
       continue-on-error: true
 
