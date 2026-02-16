@@ -102,6 +102,24 @@ jobs:
         TF_VAR_insecure_skip_verify: "true"
       run: terraform init -reconfigure
 
+    # Import Terraform resources
+    - name: Import All Existing Resources
+      working-directory: terraform
+      env:
+        TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
+        TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
+        TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
+        TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
+        TF_VAR_insecure_skip_verify: "true"
+      run: |
+        for key in windows_defender_disabled excessive_failed_logins; do
+          name=$(terraform state show "splunk_saved_searches.detections[\"$key\"]" 2>/dev/null | grep "name " | awk '{print $3}' | tr -d '"' || echo "")
+          if [ -z "$name" ]; then
+            # Get name from locals.tf or query Splunk
+            terraform import "splunk_saved_searches.detections[\"$key\"]" "SavedSearchName" || true
+          fi
+        done
+
     # Test Terraform before deployment
     - name: Terraform Validate
       working-directory: terraform
