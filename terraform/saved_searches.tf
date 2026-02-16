@@ -16,7 +16,7 @@ resource "splunk_saved_searches" "detections" {
   description = each.value.description
 
   # The SPL search query - reads from generated file
-  search = try(file("${path.module}/../generated/splunk/${each.value.spl_file}"), "")
+  search = file("${path.module}/../generated/splunk/${each.value.spl_file}")
 
   # ============================================
   # Schedule Configuration
@@ -48,7 +48,18 @@ resource "splunk_saved_searches" "detections" {
   is_visible   = true
 
   # Set priority based on severity
-  schedule_priority = each.value.alert_severity == "critical" || each.value.alert_severity == "high" ? "highest" : "default"
+  schedule_priority = contains(["critical", "high"], each.value.alert_severity) ? "highest" : "default"
+
+  # ============================================
+  # Lifecycle Management
+  # ============================================
+  lifecycle {
+    # Create new resource before destroying old one
+    create_before_destroy = false
+
+    # Prevent accidental deletion of all resources
+    prevent_destroy = false
+  }
 
   # ============================================
   # Metadata (optional but helpful)
