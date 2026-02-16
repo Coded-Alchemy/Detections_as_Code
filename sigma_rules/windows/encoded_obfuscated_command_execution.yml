@@ -1,36 +1,75 @@
-# T1027 - Obfuscated Files or Information
-
-title: Encoded/Obfuscated Command Execution
-id: a8b9c0d1-e2f3-4a5b-6c7d-8e9f0a1b2c3d
-status: stable
-description: Detects execution of encoded or obfuscated commands
-references:
-    - https://attack.mitre.org/techniques/T1027/
+id: DET-PS-OBF-001
+name: Suspicious Encoded or Obfuscated PowerShell Execution
+version: 1.0
 author: Taji Abdullah
-date: 2026-02-15
-tags:
-    - attack.defense_evasion
-    - attack.t1027
+status: production
+created: 2026-02-15
+last_modified: 2026-02-16
+
+description: >
+  Detects suspicious PowerShell execution involving encoded commands
+  or obfuscation techniques consistent with MITRE ATT&CK T1027.
+
+references:
+  - https://attack.mitre.org/techniques/T1027/
+
+attack:
+  tactic:
+    - defense_evasion
+  technique:
+    id: T1027
+    name: Obfuscated Files or Information
+  subtechnique:
+    - T1027.010  # Command Obfuscation
+
 logsource:
-    category: process_creation
-    product: windows
+  product: windows
+  category: process_creation
+  required_fields:
+    - _time
+    - host
+    - user
+    - Image
+    - ParentImage
+    - CommandLine
+
 detection:
-    selection_encoding:
-        CommandLine|contains:
-            - '-enc'
-            - '-encodedcommand'
-            - 'FromBase64String'
-            - '::FromBase64'
-    selection_obfuscation:
-        CommandLine|contains:
-            - 'char'
-            - 'join'
-            - 'replace'
-            - 'split'
-        CommandLine|re: '.*[\+\^\%].*'
-    condition: selection_encoding or selection_obfuscation
-falsepositives:
-    - Legitimate encoded scripts
-    - Software deployment tools
-    - Automation frameworks
-level: high
+  search: |
+    index=win_10
+    (EventCode=1 OR EventCode=4688)
+    | where like(Image,"%powershell%") OR like(Image,"%pwsh%")
+    | eval has_obfuscation_chars = if(
+        like(CommandLine,"%+%") OR like(CommandLine,"%^%") OR like(CommandLine,"%%%"),1,0)
+    | eval encoding_match = if(
+        like(CommandLine,"%-enc%")
+        OR like(CommandLine,"%-encodedcommand%")
+        OR like(CommandLine,"%FromBase64String%")
+        OR like(CommandLine,"%::FromBase64%"),1,0)
+    | eval obfuscation_match = if(
+        (like(CommandLine,"%char%")
+         OR like(CommandLine,"%join%")
+         OR like(CommandLine,"%replace%")
+         OR like(CommandLine,"%split%"))
+        AND has_obfuscation_chars=1,1,0)
+    | rex field=CommandLine "(?<long_base64>[A-Za-z0-9+/=]{40,})"
+    | eval long_base64_flag = if(isnotnull(long_base64),1,0)
+    | eval suspicious_parent = if(
+        like(ParentImage,"%winword.exe%")
+        OR like(ParentImage,"%excel.exe%")
+        OR like(ParentImage,"%outlook.exe%")
+        OR like(ParentImage,"%mshta.exe%")
+        OR like(ParentImage,"%wscript.exe%"),1,0)
+    | where encoding_match=1 OR obfuscation_match=1
+
+false_positives:
+  - SCCM or enterprise deployment frameworks
+  - Security testing tools
+  - Authorized automation scripts
+
+response:
+  playbook: PB-PS-OBF-INVESTIGATION
+  triage_steps:
+    - Validate user and host
+    - Decode Base64 payload if present
+    - Inspect parent process lineage
+    - Check for lateral movement indicators
