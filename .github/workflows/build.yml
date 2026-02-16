@@ -1,5 +1,5 @@
 # ============================================
-# Github Actions build file
+# GitHub Actions build file
 # ============================================
 # This file describes the CI/CD automation steps.
 
@@ -31,6 +31,23 @@ jobs:
     - name: Clean Workspace
       run: |
         rm -rf generated/
+        rm -f terraform/locals.tf
+
+    # Install dependencies
+    - name: Install Dependencies
+      run: |
+        python3 -m pip install --upgrade pip pyyaml
+
+    # Generate locals.tf automatically
+    - name: Generate Terraform Locals from Sigma Rules
+      run: |
+        chmod +x scripts/generate_locals.py
+        python3 scripts/generate_locals.py
+        
+        echo "### Generated Terraform Configuration" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`hcl" >> $GITHUB_STEP_SUMMARY
+        head -n 50 terraform/locals.tf >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
     # Install and configure Sigma with Splunk plugin
     #- name: Install Sigma
@@ -102,6 +119,50 @@ jobs:
         TF_VAR_insecure_skip_verify: "true"
       run: terraform init -reconfigure
 
+    # Pre-cleanup: Remove any broken state entries BEFORE import
+    - name: Pre-Cleanup Broken State Entries
+      working-directory: terraform
+      run: |
+        echo "Pre-cleanup: Checking for broken state entries..."
+        
+        # List all detection resources
+        STATE_RESOURCES=$(terraform state list 2>/dev/null | grep 'splunk_saved_searches.detections' || echo "")
+        
+        if [ -z "$STATE_RESOURCES" ]; then
+          echo "No resources in state"
+          exit 0
+        fi
+        
+        echo "Found resources in state:"
+        echo "$STATE_RESOURCES"
+        echo ""
+        
+        # Try to read each resource, remove if it fails
+        echo "$STATE_RESOURCES" | while read -r resource; do
+          echo "Testing: $resource"
+          
+          # Capture both stdout and stderr
+          if terraform state show "$resource" >/tmp/test_output.txt 2>&1; then
+            # Check if output contains error messages
+            if grep -qi "error\|404\|not found\|invalid" /tmp/test_output.txt; then
+              echo "  ✗ Contains errors, removing..."
+              terraform state rm "$resource" 2>&1 || true
+            else
+              echo "  ✓ OK"
+            fi
+          else
+            echo "  ✗ Failed to read, removing..."
+            terraform state rm "$resource" 2>&1 || true
+          fi
+        done
+        
+        rm -f /tmp/test_output.txt
+        
+        echo ""
+        echo "Pre-cleanup complete. Remaining resources:"
+        terraform state list | grep 'splunk_saved_searches.detections' || echo "  (none)"
+      continue-on-error: true
+
     # Import Terraform resources
     - name: Import Existing Splunk Saved Searches
       working-directory: terraform
@@ -112,55 +173,65 @@ jobs:
         TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
         TF_VAR_insecure_skip_verify: "true"
       run: |
-        echo "Checking for existing saved searches to import..."
+        echo "Importing existing saved searches from Splunk..."
         
-        # Extract all detection rule keys and names from locals.tf
-        detection_keys=$(grep -A 50 'detection_rules = {' locals.tf | grep -E '^\s+\w+\s*=' | awk '{print $1}' | grep -v '{' || echo "")
+        # Get existing searches from Splunk
+        EXISTING=$(curl -k -s -u "${{ secrets.SPLUNK_USERNAME }}:${{ secrets.SPLUNK_PASSWORD }}" \
+          "${{ secrets.SPLUNK_URL }}/services/saved/searches?output_mode=json&count=0" \
+          | jq -r '.entry[].name' 2>/dev/null || echo "")
         
-        if [ -z "$detection_keys" ]; then
-          echo "No detection rules found in locals.tf"
+        if [ -z "$EXISTING" ]; then
+          echo "No existing searches found - skipping import"
           exit 0
         fi
         
-        # For each detection rule, try to import if it exists in Splunk
-        for key in $detection_keys; do
-          # Get the rule name from locals.tf
-          rule_name=$(grep -A 20 "$key\s*=" locals.tf | grep 'name\s*=' | head -1 | sed 's/.*name\s*=\s*"\(.*\)".*/\1/' || echo "")
+        echo "Found existing searches in Splunk"
+        echo "$EXISTING" > /tmp/existing_searches.txt
+        
+        # Parse locals.tf using Python (path relative to terraform directory)
+        chmod +x ../scripts/import_existing_searches.py
+        python3 ../scripts/import_existing_searches.py > /tmp/tf_rules.txt
+        
+        if [ ! -s /tmp/tf_rules.txt ]; then
+          echo "No detection rules found"
+          exit 0
+        fi
+        
+        echo "Found rules to process:"
+        cat /tmp/tf_rules.txt
+        echo ""
+        
+        # Import matching searches
+        while IFS='|' read -r key name; do
+          if [ -z "$key" ] || [ -z "$name" ]; then
+            continue
+          fi
           
-          if [ -n "$rule_name" ]; then
-            echo "Attempting to import: $rule_name (key: $key)"
+          if grep -Fxq "$name" /tmp/existing_searches.txt; then
+            echo "Found in Splunk: $name (key: $key)"
             
-            # Check if already in state
             if terraform state show "splunk_saved_searches.detections[\"$key\"]" >/dev/null 2>&1; then
-              echo "  Already in state, skipping"
+              echo "  ✓ Already in state"
             else
-              # Try to import (ignore errors if doesn't exist in Splunk)
-              if terraform import "splunk_saved_searches.detections[\"$key\"]" "$rule_name" 2>&1; then
-                echo "  Successfully imported"
+              echo "  → Importing..."
+              if terraform import "splunk_saved_searches.detections[\"$key\"]" "$name" 2>&1; then
+                echo "  ✓ Successfully imported"
               else
-                echo "  Does not exist in Splunk yet, will be created"
+                echo "  ✗ Import failed (will be created)"
               fi
             fi
+          else
+            echo "Not in Splunk yet: $name (key: $key) - will be created"
           fi
-        done
+        done < /tmp/tf_rules.txt
         
+        rm -f /tmp/existing_searches.txt /tmp/tf_rules.txt
+        echo ""
         echo "Import process complete"
       continue-on-error: true
 
-    # Test Terraform before deployment
-    - name: Terraform Validate
-      working-directory: terraform
-      env:
-        TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
-        TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
-        TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
-        TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
-        TF_VAR_insecure_skip_verify: "true"
-      run: terraform validate
-
-    # Terraform plan
-    - name: Terraform Plan
-      id: plan
+    # Clean up stale state entries
+    - name: Clean Up Terraform State
       working-directory: terraform
       env:
         TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
@@ -169,33 +240,100 @@ jobs:
         TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
         TF_VAR_insecure_skip_verify: "true"
       run: |
-        terraform plan -out=tfplan
-        terraform show tfplan
-
-    # Terraform apply
-    - name: Terraform Apply
-      working-directory: terraform
-      env:
-        TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
-        TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
-        TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
-        TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
-        TF_VAR_insecure_skip_verify: "true"
-      run: |
-        terraform apply tfplan
+        echo "Checking for stale resources in Terraform state..."
         
-        echo "### Deployment Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Deployed Detection Rules:**" >> $GITHUB_STEP_SUMMARY
-        terraform output -json deployed_detections | jq -r 'to_entries[] | "- **\(.value.name)** (Severity: \(.value.severity))"' >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Total Rules Deployed:** $(terraform output -raw detection_count)" >> $GITHUB_STEP_SUMMARY
+        STATE_RESOURCES=$(terraform state list | grep 'splunk_saved_searches.detections' || echo "")
+        
+        if [ -z "$STATE_RESOURCES" ]; then
+          echo "No resources in state to check"
+          exit 0
+        fi
+        
+        echo "Resources currently in Terraform state:"
+        echo "$STATE_RESOURCES"
+        echo ""
+        
+        # Get existing searches from Splunk (as a simple list of names)
+        echo "Fetching saved searches from Splunk..."
+        EXISTING=$(curl -k -s -u "${{ secrets.SPLUNK_USERNAME }}:${{ secrets.SPLUNK_PASSWORD }}" \
+          "${{ secrets.SPLUNK_URL }}/services/saved/searches?output_mode=json&count=0" \
+          | jq -r '.entry[].name' 2>/dev/null || echo "")
+        
+        if [ -z "$EXISTING" ]; then
+          echo "Warning: Could not fetch saved searches from Splunk"
+          exit 0
+        fi
+        
+        echo "Saved searches currently in Splunk:"
+        echo "$EXISTING"
+        echo ""
+        
+        echo "$EXISTING" > /tmp/existing_searches.txt
+        
+        # Check each resource in state
+        REMOVED_COUNT=0
+        echo "$STATE_RESOURCES" | while read -r resource; do
+          echo "Validating: $resource"
+          
+          # Extract resource ID (which is the saved search name)
+          RESOURCE_ID=$(terraform state show "$resource" 2>/dev/null | grep '^id ' | awk -F'"' '{print $2}' || echo "")
+          
+          if [ -z "$RESOURCE_ID" ]; then
+            echo "  ⚠ Could not determine resource ID"
+            # Try getting name instead
+            RESOURCE_ID=$(terraform state show "$resource" 2>/dev/null | grep -m 1 '^[[:space:]]*name[[:space:]]*=' | sed 's/.*= "\(.*\)"/\1/' || echo "")
+          fi
+          
+          if [ -z "$RESOURCE_ID" ]; then
+            echo "  ✗ Cannot determine resource identifier, removing..."
+            terraform state rm "$resource" 2>&1 || true
+            REMOVED_COUNT=$((REMOVED_COUNT + 1))
+            continue
+          fi
+          
+          echo "  → Resource ID/Name: '$RESOURCE_ID'"
+          
+          # Check if it exists in Splunk by exact name match
+          if grep -Fxq "$RESOURCE_ID" /tmp/existing_searches.txt; then
+            echo "  ✓ Resource exists in Splunk"
+          else
+            echo "  ✗ Resource NOT found in Splunk, removing from state..."
+            terraform state rm "$resource" 2>&1 || true
+            REMOVED_COUNT=$((REMOVED_COUNT + 1))
+          fi
+        done
+        
+        rm -f /tmp/existing_searches.txt
+        echo ""
+        echo "State cleanup complete (removed $REMOVED_COUNT resource(s))"
+        
+        # Show final state
+        echo ""
+        echo "Remaining resources in state:"
+        terraform state list | grep 'splunk_saved_searches.detections' || echo "  (none)"
+      continue-on-error: true
 
-    # Clean up
-    - name: Cleanup
-      if: always()
+    # Validate each resource exists in Splunk
+    - name: Validate Resources Against Splunk
+      working-directory: terraform
+      env:
+        TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
+        TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
+        TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
+        TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
+        TF_VAR_insecure_skip_verify: "true"
       run: |
-        echo "Cleaning up temporary files..."
-        rm -rf terraform/.terraform/
-        rm -f terraform/tfplan
-        rm -f terraform/terraform.tfstate.backup
+        echo "Validating each resource exists in Splunk..."
+        
+        STATE_RESOURCES=$(terraform state list | grep 'splunk_saved_searches.detections' || echo "")
+        
+        if [ -z "$STATE_RESOURCES" ]; then
+          echo "No resources to validate"
+          exit 0
+        fi
+        
+        echo "$STATE_RESOURCES" | while read -r resource; do
+          echo "Checking: $resource"
+          
+          # Get the saved search name from state
+          SEARCH_NAME=$(terraform state show "$resource" 2>/dev/null | grep -m 1 '^[[:space:]]*name[[:space:]]*=' | sed 's/.*= "\(.*\)"/\1/' || echo "")

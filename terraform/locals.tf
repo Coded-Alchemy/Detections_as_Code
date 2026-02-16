@@ -136,7 +136,7 @@ locals {
   # ============================================
   # These apply to ALL detection rules
 
-  actions          = "email"
+  actions          = ["email"]
   alert_type       = "number of events"
   alert_comparator = "greater than"
 
