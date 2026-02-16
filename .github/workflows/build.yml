@@ -144,26 +144,111 @@ jobs:
         echo "Found existing searches in Splunk"
         echo "$EXISTING" > /tmp/existing_searches.txt
         
-        # Parse locals.tf using Python
+        # Parse locals.tf using Python (path relative to terraform directory)
+        chmod +x ../scripts/import_existing_searches.py
         python3 ../scripts/import_existing_searches.py > /tmp/tf_rules.txt
+        
+        if [ ! -s /tmp/tf_rules.txt ]; then
+          echo "No detection rules found"
+          exit 0
+        fi
+        
+        echo "Found rules to process:"
+        cat /tmp/tf_rules.txt
+        echo ""
         
         # Import matching searches
         while IFS='|' read -r key name; do
+          if [ -z "$key" ] || [ -z "$name" ]; then
+            continue
+          fi
+          
           if grep -Fxq "$name" /tmp/existing_searches.txt; then
-            echo "Importing: $name (key: $key)"
+            echo "Found in Splunk: $name (key: $key)"
             
             if terraform state show "splunk_saved_searches.detections[\"$key\"]" >/dev/null 2>&1; then
               echo "  ✓ Already in state"
             else
-              terraform import "splunk_saved_searches.detections[\"$key\"]" "$name" 2>&1 || echo "  ✗ Failed"
+              echo "  → Importing..."
+              if terraform import "splunk_saved_searches.detections[\"$key\"]" "$name" 2>&1; then
+                echo "  ✓ Successfully imported"
+              else
+                echo "  ✗ Import failed (will be created)"
+              fi
             fi
           else
-            echo "Not in Splunk: $name (will be created)"
+            echo "Not in Splunk yet: $name (key: $key) - will be created"
           fi
         done < /tmp/tf_rules.txt
         
         rm -f /tmp/existing_searches.txt /tmp/tf_rules.txt
-        echo "Import complete"
+        echo ""
+        echo "Import process complete"
+      continue-on-error: true
+
+    # Clean up stale state entries
+    - name: Clean Up Terraform State
+      working-directory: terraform
+      env:
+        TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
+        TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
+        TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
+        TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
+        TF_VAR_insecure_skip_verify: "true"
+      run: |
+        echo "Checking for stale resources in Terraform state..."
+        
+        # Get list of saved searches in state
+        STATE_RESOURCES=$(terraform state list | grep 'splunk_saved_searches.detections' || echo "")
+        
+        if [ -z "$STATE_RESOURCES" ]; then
+          echo "No resources in state to check"
+          exit 0
+        fi
+        
+        # Get existing searches from Splunk
+        EXISTING=$(curl -k -s -u "${{ secrets.SPLUNK_USERNAME }}:${{ secrets.SPLUNK_PASSWORD }}" \
+          "${{ secrets.SPLUNK_URL }}/services/saved/searches?output_mode=json&count=0" \
+          | jq -r '.entry[].name' 2>/dev/null || echo "")
+        
+        echo "$EXISTING" > /tmp/existing_searches.txt
+        
+        # Check each resource in state
+        echo "$STATE_RESOURCES" | while read -r resource; do
+          echo "Checking: $resource"
+          
+          # Extract the resource name from state
+          RESOURCE_NAME=$(terraform state show "$resource" 2>/dev/null | grep -m 1 'name ' | awk -F'"' '{print $2}' || echo "")
+          
+          if [ -n "$RESOURCE_NAME" ]; then
+            # Check if it exists in Splunk
+            if grep -Fxq "$RESOURCE_NAME" /tmp/existing_searches.txt; then
+              echo "  ✓ Resource exists in Splunk"
+            else
+              echo "  ✗ Resource not found in Splunk, removing from state"
+              terraform state rm "$resource" || true
+            fi
+          else
+            echo "  ⚠ Could not determine resource name, skipping"
+          fi
+        done
+        
+        rm -f /tmp/existing_searches.txt
+        echo "State cleanup complete"
+      continue-on-error: true
+
+    # Refresh Terraform state
+    - name: Terraform Refresh
+      working-directory: terraform
+      env:
+        TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
+        TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
+        TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
+        TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
+        TF_VAR_insecure_skip_verify: "true"
+      run: |
+        echo "Refreshing Terraform state..."
+        terraform apply -refresh-only -auto-approve || echo "Refresh completed with warnings"
       continue-on-error: true
 
     # Test Terraform before deployment
