@@ -145,7 +145,7 @@ jobs:
         echo "$EXISTING" > /tmp/existing_searches.txt
         
         # Parse locals.tf using Python
-        python3 ../scripts/import_existing.py > /tmp/tf_rules.txt
+        python3 ../scripts/import_existing_searches.py > /tmp/tf_rules.txt
         
         # Import matching searches
         while IFS='|' read -r key name; do
