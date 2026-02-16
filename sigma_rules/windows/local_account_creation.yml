@@ -1,0 +1,29 @@
+# T1136.001 - Create Account: Local Account
+
+title: Local Account Creation
+id: a2b3c4d5-e6f7-8a9b-0c1d-2e3f4a5b6c7d
+status: stable
+description: Detects creation of new local user accounts
+references:
+    - https://attack.mitre.org/techniques/T1136/001/
+author: Taji Abdullah
+date: 2026-02-15
+tags:
+    - attack.persistence
+    - attack.t1136.001
+logsource:
+    product: windows
+    service: security
+detection:
+    selection:
+        EventID: 4720
+    filter_exclude:
+        TargetUserName|contains:
+            - 'TEMP_'
+            - 'svc_'
+    condition: selection and not filter_exclude
+falsepositives:
+    - Legitimate user provisioning
+    - Service account creation
+    - Automated user management systems
+level: medium
