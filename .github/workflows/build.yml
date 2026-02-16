@@ -31,6 +31,23 @@ jobs:
     - name: Clean Workspace
       run: |
         rm -rf generated/
+        rm -f terraform/locals.tf
+
+    # Install dependencies
+    - name: Install Dependencies
+      run: |
+        python3 -m pip install --upgrade pip pyyaml
+
+    # Generate locals.tf automatically
+    - name: Generate Terraform Locals from Sigma Rules
+      run: |
+        chmod +x scripts/generate_locals.py
+        python3 scripts/generate_locals.py
+        
+        echo "### Generated Terraform Configuration" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`hcl" >> $GITHUB_STEP_SUMMARY
+        head -n 50 terraform/locals.tf >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
     # Install and configure Sigma with Splunk plugin
     #- name: Install Sigma
