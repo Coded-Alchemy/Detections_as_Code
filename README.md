@@ -24,7 +24,7 @@ Key Benefits:
 --------------
 ## Architecture
 <div align="center">
-  <img src="diagrams/dac_arch.drawio.svg" alt="DaC Architecture" style="width: 100%;">
+  <img src="diagrams/dac.arch.drawio.svg" alt="DaC Architecture" style="width: 100%;">
 </div>
 
 --------------
