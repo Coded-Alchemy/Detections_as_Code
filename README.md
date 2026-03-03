@@ -23,8 +23,9 @@ Key Benefits:
 
 --------------
 ## Architecture
-
-![Detection-as-Code Architecture](diagrams/dac_arch.drawio)
+<div align="center">
+  <img src="diagrams/dac_arch.drawio.svg" alt="DaC Architecture" style="width: 100%;">
+</div>
 
 --------------
 ## Workflow
