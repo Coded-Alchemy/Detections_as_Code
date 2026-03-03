@@ -1,7 +1,6 @@
-# Detections_as_Code  
+# Sigma-to-Splunk CI/CD Detection Engineering Pipeline
   
-This Detection-as-Code(DaC) pipeline automates the deployment and management of security  
-detections using infrastructure-as-code(IaC) principles. The pipeline converts Sigma rules into Splunk queries and automatically deploys them to the SIEM environment.  
+Automated pipeline to validate, convert, and deploy Sigma detection rules to Splunk via Terraform and GitHub Actions.
   
 Key Benefits:  
 - Version-controlled detection rules  
@@ -23,13 +22,19 @@ Key Benefits:
 | Version Control  | Git/GitHub        | Source control and collaboration  |
 
 --------------
+## Architecture
+
+![Detection-as-Code Architecture](diagrams/dac_arch.drawio)
+
+--------------
 ## Workflow
 
 - Store Sigma rules in `rules/`  
 - Convert rules to Splunk SPL in CI  
 - Generate Terraform resources (splunk_saved_search) from generated SPL  
 - Apply Terraform to deploy saved searches and other Splunk infrastructure
----
+--------------
+
 ## Demonstrated Skills
 - DevOps/SecOps Practices
 	- Infrastructure as Code (Terraform)
@@ -73,7 +78,3 @@ Key Benefits:
 This Detection-as-Code pipeline demonstrates modern security engineering practices and  
 DevSecOps principles highly valued in SOC environments.  
 
-
-
-
-  

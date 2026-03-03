@@ -1,0 +1,31 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.5.2 Chrome/142.0.7444.265 Electron/39.6.1 Safari/537.36" version="29.5.2">
+  <diagram name="Page-1" id="KrJS4QOxAYH_zpZTmqF7">
+    <mxGraphModel dx="1015" dy="828" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="epgQ4xeTuIJk_ROrkpvS-2" parent="1" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;Detections as Code Lab Architecture&lt;/h1&gt;" vertex="1">
+          <mxGeometry height="280" width="370" x="40" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="epgQ4xeTuIJk_ROrkpvS-3" parent="1" style="shape=step;perimeter=stepPerimeter;whiteSpace=wrap;html=1;fixedSize=1;" value="Sigma Rules&lt;div&gt;(YAML)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="80" width="120" x="65" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="epgQ4xeTuIJk_ROrkpvS-4" parent="1" style="shape=step;perimeter=stepPerimeter;whiteSpace=wrap;html=1;fixedSize=1;" value="Conversion" vertex="1">
+          <mxGeometry height="80" width="120" x="185" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="epgQ4xeTuIJk_ROrkpvS-5" parent="1" style="shape=step;perimeter=stepPerimeter;whiteSpace=wrap;html=1;fixedSize=1;" value="Gererated SPL" vertex="1">
+          <mxGeometry height="80" width="120" x="305" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="epgQ4xeTuIJk_ROrkpvS-6" parent="1" style="shape=step;perimeter=stepPerimeter;whiteSpace=wrap;html=1;fixedSize=1;" value="Terraform&lt;div&gt;Resources&lt;/div&gt;&lt;div&gt;(Savedserches)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="80" width="120" x="425" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="epgQ4xeTuIJk_ROrkpvS-7" parent="1" style="shape=step;perimeter=stepPerimeter;whiteSpace=wrap;html=1;fixedSize=1;" value="GitHub Actions&lt;div&gt;CI/CD Pipeline&lt;/div&gt;" vertex="1">
+          <mxGeometry height="80" width="120" x="545" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="epgQ4xeTuIJk_ROrkpvS-8" parent="1" style="shape=step;perimeter=stepPerimeter;whiteSpace=wrap;html=1;fixedSize=1;" value="Splunk&lt;div&gt;Deployment&lt;/div&gt;" vertex="1">
+          <mxGeometry height="80" width="120" x="665" y="440" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
