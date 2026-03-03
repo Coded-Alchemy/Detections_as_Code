@@ -1,7 +1,8 @@
 # Sigma-to-Splunk CI/CD Detection Engineering Pipeline
   
 Automated pipeline to validate, convert, and deploy Sigma detection rules to Splunk via Terraform and GitHub Actions.
-  
+This project demonstrates production-style detection engineering practices including version control, rule validation, MITRE ATT&CK mapping, macro abstraction, and Terraform-based deployment.
+
 Key Benefits:  
 - Version-controlled detection rules  
 - Automated testing and validation  
