@@ -1,7 +1,8 @@
 # Sigma-to-Splunk CI/CD Detection Engineering Pipeline
   
 Automated pipeline to validate, convert, and deploy Sigma detection rules to Splunk via Terraform and GitHub Actions.
-This project demonstrates production-style detection engineering practices including version control, rule validation, MITRE ATT&CK mapping, macro abstraction, and Terraform-based deployment.
+This project demonstrates production-style detection engineering practices including version control, rule validation, 
+MITRE ATT&CK mapping, macro abstraction, and Terraform-based deployment.
 
 Key Benefits:  
 - Version-controlled detection rules  
@@ -10,6 +11,10 @@ Key Benefits:
 - Rapid detection deployment  
 - Collaboration and peer review  
 - Rollback capabilities  
+
+This Detection-as-Code pipeline demonstrates modern security engineering practices and  
+DevSecOps principles highly valued in SOC environments.  
+
 -------  
 ## Technology Stack  
   
@@ -25,13 +30,13 @@ Key Benefits:
 --------------
 ## Architecture
 <div align="center">
-  <img src="diagrams/dac.arch.drawio.svg" alt="DaC Architecture" style="width: 100%;">
+  <img src="docs/dac.arch.drawio.svg" alt="DaC Architecture" style="width: 100%;">
 </div>
 
 --------------
 ## Workflow
 
-- Store Sigma rules in `rules/`  
+- Store Sigma rules in `sigma_rules/`  
 - Convert rules to Splunk SPL in CI  
 - Generate Terraform resources (splunk_saved_search) from generated SPL  
 - Apply Terraform to deploy saved searches and other Splunk infrastructure
@@ -77,6 +82,4 @@ Key Benefits:
     - Map to compliance frameworks  
     - Generate compliance reports  
   
-This Detection-as-Code pipeline demonstrates modern security engineering practices and  
-DevSecOps principles highly valued in SOC environments.  
 
