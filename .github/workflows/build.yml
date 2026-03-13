@@ -110,9 +110,9 @@ jobs:
 
 
   # ==============================
-  # DEPLOYMENT JOB (Main Only)
+  # CD JOB (Main branch Only)
   # ==============================
-  deploy:
+  cd:
     if: github.ref == 'refs/heads/main'
     runs-on: [self-hosted, linux, x64]
     timeout-minutes: 20
