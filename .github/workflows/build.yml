@@ -18,6 +18,11 @@ jobs:
       SPLUNK_USERNAME: ${{ secrets.SPLUNK_USERNAME }}
       SPLUNK_PASSWORD: ${{ secrets.SPLUNK_PASSWORD }}
       SPLUNK_URL: ${{ secrets.SPLUNK_URL }}
+      TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
+      TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
+      TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
+      TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
+      TF_VAR_insecure_skip_verify: "true"
 
     # Timeout to prevent hanging jobs
     timeout-minutes: 15
@@ -111,12 +116,6 @@ jobs:
     # Initialize Terraform
     - name: Terraform Init
       working-directory: terraform
-      env:
-        TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
-        TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
-        TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
-        TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
-        TF_VAR_insecure_skip_verify: "true"
       run: terraform init -reconfigure
 
     # Pre-cleanup: Remove any broken state entries BEFORE import
@@ -166,12 +165,6 @@ jobs:
     # Import Terraform resources
     - name: Import Existing Splunk Saved Searches
       working-directory: terraform
-      env:
-        TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
-        TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
-        TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
-        TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
-        TF_VAR_insecure_skip_verify: "true"
       run: |
         echo "Importing existing saved searches from Splunk..."
         
@@ -233,12 +226,6 @@ jobs:
     # Clean up stale state entries
     - name: Clean Up Terraform State
       working-directory: terraform
-      env:
-        TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
-        TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
-        TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
-        TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
-        TF_VAR_insecure_skip_verify: "true"
       run: |
         echo "Checking for stale resources in Terraform state..."
         
@@ -316,12 +303,6 @@ jobs:
     # Validate each resource exists in Splunk
     - name: Validate Resources Against Splunk
       working-directory: terraform
-      env:
-        TF_VAR_splunk_url: ${{ secrets.SPLUNK_URL }}
-        TF_VAR_splunk_username: ${{ secrets.SPLUNK_USERNAME }}
-        TF_VAR_splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
-        TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
-        TF_VAR_insecure_skip_verify: "true"
       run: |
         echo "Validating each resource exists in Splunk..."
         
