@@ -80,7 +80,7 @@ def generate_locals_tf(rules):
       # ============================================
       alert_type       = "number of events"
       alert_comparator = "greater than"
-      actions          = ["email"]
+      actions          = "email"
     
       # ============================================
       # Detection Rules Configuration
