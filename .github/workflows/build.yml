@@ -61,7 +61,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0          # full history needed for git diff
+          fetch-depth: 0
 
       - name: Splunk Health Check
         uses: ./.github/actions/splunk-health-check
@@ -216,7 +216,7 @@ jobs:
       SPLUNK_USERNAME: ${{ secrets.SPLUNK_USERNAME }}
       SPLUNK_PASSWORD: ${{ secrets.SPLUNK_PASSWORD }}
       SPLUNK_URL:      ${{ secrets.SPLUNK_URL }}
-      SPLUNK_TLS_SKIP: "true"    # set to "false" for production Splunk instances
+      SPLUNK_TLS_SKIP: "true"
 
     steps:
       - name: Checkout
@@ -230,6 +230,12 @@ jobs:
         with:
           name: terraform-locals
           path: terraform/
+
+      - name: Download SPL Detections
+        uses: actions/download-artifact@v4
+        with:
+          name: spl-detections
+          path: generated/splunk/
 
       - name: Setup Terraform Environment
         uses: ./.github/actions/terraform-env
@@ -272,7 +278,7 @@ jobs:
       SPLUNK_USERNAME: ${{ secrets.SPLUNK_USERNAME }}
       SPLUNK_PASSWORD: ${{ secrets.SPLUNK_PASSWORD }}
       SPLUNK_URL:      ${{ secrets.SPLUNK_URL }}
-      SPLUNK_TLS_SKIP: "true"    # set to "false" for production Splunk instances
+      SPLUNK_TLS_SKIP: "true"
 
     steps:
       - name: Checkout
@@ -286,6 +292,12 @@ jobs:
         with:
           name: terraform-locals
           path: terraform/
+
+      - name: Download SPL Detections
+        uses: actions/download-artifact@v4
+        with:
+          name: spl-detections
+          path: generated/splunk/
 
       - name: Setup Terraform Environment
         uses: ./.github/actions/terraform-env
@@ -326,6 +338,12 @@ jobs:
         with:
           name: terraform-locals
           path: terraform/
+
+      - name: Download SPL Detections
+        uses: actions/download-artifact@v4
+        with:
+          name: spl-detections
+          path: generated/splunk/
 
       - name: Setup Terraform Environment
         uses: ./.github/actions/terraform-env
@@ -378,7 +396,7 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: [self-hosted, linux, x64]
     timeout-minutes: 20
-    environment: production        # ← triggers the manual approval gate
+    environment: production
 
     steps:
       - name: Checkout
@@ -389,6 +407,12 @@ jobs:
         with:
           name: terraform-locals
           path: terraform/
+
+      - name: Download SPL Detections
+        uses: actions/download-artifact@v4
+        with:
+          name: spl-detections
+          path: generated/splunk/
 
       - name: Download Saved Plan
         uses: actions/download-artifact@v4
