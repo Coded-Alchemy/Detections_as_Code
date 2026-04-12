@@ -1,0 +1,43 @@
+# T1203 - Exploitation for Client Execution
+
+title: Office Application Spawning Suspicious Processes
+id: 7a6f9b8c-5d4e-3a2b-1c0d-9e8f7a6b5c4d
+status: stable
+description: Detects Microsoft Office applications spawning unusual child processes
+references:
+    - https://attack.mitre.org/techniques/T1203/
+author: Taji
+date: 2026-02-15
+tags:
+    - attack.execution
+    - attack.t1203
+    - attack.defense_evasion
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_parent:
+        ParentImage|endswith:
+            - '\WINWORD.EXE'
+            - '\EXCEL.EXE'
+            - '\POWERPNT.EXE'
+            - '\OUTLOOK.EXE'
+            - '\MSACCESS.EXE'
+            - '\MSPUB.EXE'
+    selection_child:
+        Image|endswith:
+            - '\cmd.exe'
+            - '\powershell.exe'
+            - '\pwsh.exe'
+            - '\wscript.exe'
+            - '\cscript.exe'
+            - '\mshta.exe'
+            - '\regsvr32.exe'
+            - '\rundll32.exe'
+            - '\certutil.exe'
+            - '\bitsadmin.exe'
+    condition: selection_parent and selection_child
+falsepositives:
+    - Legitimate macros used in the organization
+    - Office add-ins and plugins
+level: critical

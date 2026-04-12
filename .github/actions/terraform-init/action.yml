@@ -1,0 +1,37 @@
+name: "Terraform Init"
+description: "Initialises Terraform then formats and commits any changes"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Terraform Init
+      shell: bash
+      working-directory: terraform
+      run: terraform init -reconfigure
+
+    - name: Terraform Format
+      shell: bash
+      working-directory: terraform
+      run: terraform fmt -recursive
+
+    - name: Commit Formatted Files
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          echo "PR build — skipping format commit"
+          exit 0
+        fi
+        
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}
+        
+        if git diff --quiet; then
+          echo "No formatting changes to commit"
+        else
+          git add terraform/
+          git commit -m "style: terraform fmt auto-format [skip ci]"
+          git push origin HEAD:${{ github.ref_name }}
+        fi

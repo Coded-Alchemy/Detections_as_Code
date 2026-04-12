@@ -1,0 +1,31 @@
+# T1047 - Windows Management Instrumentation
+
+title: Remote WMI Execution
+id: d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a
+status: stable
+description: Detects remote command execution via WMI
+references:
+    - https://attack.mitre.org/techniques/T1047/
+author: Taji Abdullah
+date: 2026-02-15
+tags:
+    - attack.lateral_movement
+    - attack.execution
+    - attack.t1047
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_parent:
+        ParentImage|endswith: '\wmiprvse.exe'
+    selection_wmic:
+        Image|endswith: '\wmic.exe'
+        CommandLine|contains:
+            - '/node:'
+            - 'process call create'
+    condition: selection_parent or selection_wmic
+falsepositives:
+    - Remote management tools
+    - SCCM
+    - System administration
+level: high

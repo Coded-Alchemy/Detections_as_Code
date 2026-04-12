@@ -1,0 +1,30 @@
+# T1048.003 - Exfiltration Over Alternative Protocol: DNS
+
+title: Data Exfiltration via DNS
+id: b1c2d3e4-f5a6-7b8c-9d0e-1f2a3b4c5d6e
+status: experimental
+description: Detects potential DNS tunneling or exfiltration
+references:
+    - https://attack.mitre.org/techniques/T1048/003/
+author: Taji Abdullah
+date: 2026-02-15
+tags:
+    - attack.exfiltration
+    - attack.t1048.003
+    - attack.command_and_control
+logsource:
+    category: dns
+detection:
+    selection:
+        record_type:
+            - 'TXT'
+            - 'NULL'
+            - 'MX'
+    condition: selection
+    timeframe: 5m
+    condition_count: selection | count(query) by src_ip > 100
+falsepositives:
+    - CDN traffic
+    - Legitimate DNS queries
+    - Cloud services
+level: high

@@ -1,0 +1,43 @@
+# sigma_rules/excessive_failed_login_attempts.yml
+
+title: Excessive Failed Login Attempts
+id: b1c2d3e4-f5a6-7b8c-9d0e-1f2a3b4c5d6e
+status: experimental
+description: Detects multiple failed login attempts indicating potential brute force attack
+references:
+    - https://attack.mitre.org/techniques/T1110/
+author: Taji Abdullah
+date: 2026/11/15
+modified: 2026/02/16
+
+logsource:
+    product: windows
+    service: security
+
+detection:
+    selection:
+        EventID: 4625  # An account failed to log on
+    
+    # Filter out common false positives
+    filter_system:
+        TargetUserName|endswith:
+            - '$'  # Computer accounts
+    
+    filter_known:
+        TargetUserName:
+            - 'ANONYMOUS LOGON'
+            - 'DWM-*'
+            - 'UMFD-*'
+    
+    condition: selection and not filter_system and not filter_known
+
+falsepositives:
+    - Legitimate failed logins from users who forgot passwords
+    - Service accounts with incorrect credentials
+    - Automated tools with expired credentials
+
+level: high
+
+tags:
+    - attack.credential_access
+    - attack.t1110  # Brute Force

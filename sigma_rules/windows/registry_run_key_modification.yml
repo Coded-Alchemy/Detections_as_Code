@@ -1,0 +1,35 @@
+# T1547.001 - Boot or Logon Autostart Execution: Registry Run Keys
+
+title: Registry Run Key Modification
+id: 1f2e3d4c-5b6a-7c8d-9e0f-1a2b3c4d5e6f
+status: stable
+description: Detects modifications to common autostart registry keys
+references:
+    - https://attack.mitre.org/techniques/T1547/001/
+author: Taji Abdullah
+date: 2026-02-15
+tags:
+    - attack.persistence
+    - attack.t1547.001
+logsource:
+    product: windows
+    service: security
+    definition: 'Requirements: Audit Registry must be enabled'
+detection:
+    selection_eventid:
+        EventID: 4657
+    selection_path:
+        ObjectName|contains:
+            - '\Software\Microsoft\Windows\CurrentVersion\Run'
+            - '\Software\Microsoft\Windows\CurrentVersion\RunOnce'
+            - '\Software\Microsoft\Windows\CurrentVersion\RunOnceEx'
+            - '\Software\Microsoft\Windows\CurrentVersion\RunServices'
+            - '\Software\Microsoft\Windows\CurrentVersion\RunServicesOnce'
+            - '\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Run'
+    selection_type:
+        OperationType: 'New registry value created'
+    condition: selection_eventid and selection_path and selection_type
+falsepositives:
+    - Software installations
+    - Legitimate applications setting startup entries
+level: high

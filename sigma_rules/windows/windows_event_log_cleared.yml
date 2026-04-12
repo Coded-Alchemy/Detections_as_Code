@@ -1,0 +1,27 @@
+# T1070.001 - Indicator Removal: Clear Windows Event Logs
+
+title: Windows Event Log Cleared
+id: f7a8b9c0-d1e2-3f4a-5b6c-7d8e9f0a1b2c
+status: stable
+description: Detects clearing of Windows event logs
+references:
+    - https://attack.mitre.org/techniques/T1070/001/
+author: Taji Abdullah
+date: 2026-02-15
+tags:
+    - attack.defense_evasion
+    - attack.t1070.001
+logsource:
+    product: windows
+    service: security
+detection:
+    selection_security:
+        EventID: 1102
+    selection_system:
+        EventID: 104
+    condition: selection_security or selection_system
+falsepositives:
+    - Scheduled maintenance
+    - Log rotation policies
+    - Administrative cleanup
+level: critical

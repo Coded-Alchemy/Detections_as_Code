@@ -1,0 +1,37 @@
+# T1068 - Exploitation for Privilege Escalation
+
+title: Privilege Escalation via Token Manipulation
+id: b3c4d5e6-f7a8-9b0c-1d2e-3f4a5b6c7d8e
+status: stable
+description: Detects attempts to manipulate access tokens for privilege escalation
+references:
+    - https://attack.mitre.org/techniques/T1068/
+author: Taji Abdullah
+date: 2026-02-15
+tags:
+    - attack.privilege_escalation
+    - attack.t1068
+logsource:
+    product: windows
+    service: security
+detection:
+    selection_eventid:
+        EventID: 4672
+    selection_privileges:
+        PrivilegeList|contains:
+            - 'SeDebugPrivilege'
+            - 'SeTcbPrivilege'
+            - 'SeCreateTokenPrivilege'
+            - 'SeImpersonatePrivilege'
+            - 'SeAssignPrimaryTokenPrivilege'
+    filter_system:
+        SubjectUserName:
+            - 'SYSTEM'
+            - 'LOCAL SERVICE'
+            - 'NETWORK SERVICE'
+    condition: selection_eventid and selection_privileges and not filter_system
+falsepositives:
+    - Legitimate administrative tools
+    - Debugging tools
+    - Security software
+level: high

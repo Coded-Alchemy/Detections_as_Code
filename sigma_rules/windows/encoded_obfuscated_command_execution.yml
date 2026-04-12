@@ -1,0 +1,38 @@
+# T1027 - Obfuscated Files or Information
+
+title: Encoded/Obfuscated Command Execution
+id: a8b9c0d1-e2f3-4a5b-6c7d-8e9f0a1b2c3d
+status: stable
+description: Detects execution of encoded or obfuscated commands
+references:
+    - https://attack.mitre.org/techniques/T1027/
+author: Taji Abdullah
+date: 2026-02-15
+tags:
+    - attack.defense_evasion
+    - attack.t1027
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_encoding:
+        CommandLine|contains:
+            - '-enc'
+            - '-encodedcommand'
+            - 'FromBase64String'
+            - '::FromBase64'
+    selection_obfuscation:
+        CommandLine|contains:
+            - 'char'
+            - 'join'
+            - 'replace'
+            - 'split'
+        CommandLine|re: '.*[\+\^\%].*'
+    condition: selection_encoding or selection_obfuscation
+falsepositives:
+    - Legitimate encoded scripts
+    - Software deployment tools
+    - Automation frameworks
+level: high
+
+
