@@ -1,0 +1,34 @@
+name: "Splunk Health Check"
+description: "Asserts Splunk API is reachable and returns HTTP 200"
+
+inputs:
+  splunk_url:
+    description: "Splunk instance URL"
+    required: true
+  splunk_username:
+    description: "Splunk admin username"
+    required: true
+  splunk_password:
+    description: "Splunk admin password"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Ping Splunk API
+      shell: bash
+      run: |
+        echo "Verifying Splunk is reachable at ${{ inputs.splunk_url }} ..."
+
+        HTTP_CODE=$(curl -k -s -o /dev/null -w "%{http_code}" \
+          -u "${{ inputs.splunk_username }}:${{ inputs.splunk_password }}" \
+          "${{ inputs.splunk_url }}/services/server/info?output_mode=json")
+
+        echo "HTTP response code: $HTTP_CODE"
+
+        if [ "$HTTP_CODE" -ne 200 ]; then
+          echo "ERROR: Splunk returned $HTTP_CODE — aborting pipeline"
+          exit 1
+        fi
+
+        echo "Splunk health check passed."
