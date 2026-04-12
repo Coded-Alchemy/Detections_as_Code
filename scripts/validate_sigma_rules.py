@@ -100,7 +100,7 @@ def main() -> int:
     print(f"Validating {total} Sigma rule(s)...\n")
 
     for rule_path in rule_files:
-        rel = rule_path.relative_to(Path("../files"))
+        rel = rule_path.relative_to(Path("."))
         errors = validate_rule(rule_path)
 
         if errors:
