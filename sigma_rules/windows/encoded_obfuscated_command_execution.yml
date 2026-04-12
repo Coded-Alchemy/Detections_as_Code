@@ -1,16 +1,22 @@
 # T1027 - Obfuscated Files or Information
 
-title: Encoded/Obfuscated Command Execution
+title: Obfuscated Command Line Execution Detected
 id: a8b9c0d1-e2f3-4a5b-6c7d-8e9f0a1b2c3d
 status: stable
-description: Detects execution of encoded or obfuscated commands
+description: Detects obfuscated command line execution patterns commonly used in PowerShell-based
+  attacks. Flags base64-encoded commands, encoded command switches, and string
+  manipulation functions (char, join, replace, split) combined with obfuscation
+  characters such as +, ^, or %.
 references:
     - https://attack.mitre.org/techniques/T1027/
+    - https://attack.mitre.org/techniques/T1059/001/
 author: Taji Abdullah
 date: 2026-02-15
 tags:
     - attack.defense_evasion
     - attack.t1027
+    - attack.execution
+    - attack.t1059.001
 logsource:
     category: process_creation
     product: windows
@@ -21,18 +27,25 @@ detection:
             - '-encodedcommand'
             - 'FromBase64String'
             - '::FromBase64'
-    selection_obfuscation:
+    selection_string_manip:
         CommandLine|contains:
             - 'char'
             - 'join'
             - 'replace'
             - 'split'
-        CommandLine|re: '.*[\+\^\%].*'
-    condition: selection_encoding or selection_obfuscation
+    filter_obfuscation_chars:
+        CommandLine|re: '[\+\^\%]'
+    condition: selection_encoded OR (selection_string_manip AND filter_obfuscation_chars)
 falsepositives:
-    - Legitimate encoded scripts
-    - Software deployment tools
-    - Automation frameworks
+  - Legitimate administrative scripts using base64 encoding
+  - Packaging or build tools that use string manipulation with special characters
+  - Some software installers may trigger the string manipulation condition
 level: high
+fields:
+  - CommandLine
+  - ParentCommandLine
+  - Image
+  - User
+
 
 
