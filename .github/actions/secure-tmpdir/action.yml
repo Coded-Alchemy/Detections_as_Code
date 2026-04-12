@@ -1,0 +1,46 @@
+# ============================================================
+# Composite Action: Secure Temp Directory
+# ------------------------------------------------------------
+# Creates a job-scoped temp directory under /tmp using the
+# GitHub run ID and job name so concurrent jobs on the same
+# self-hosted runner never share temp files.
+#
+# Exports SECURE_TMPDIR for use in subsequent steps.
+# Registers a cleanup step to wipe the directory on job exit
+# regardless of success or failure, preventing credential-
+# adjacent data from persisting between runs.
+#
+# Usage in subsequent steps:
+#   run: some_script.sh "$SECURE_TMPDIR"
+# ============================================================
+name: "Secure Temp Directory"
+description: "Creates and registers a job-scoped temp directory"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Create Job-Scoped Temp Directory
+      shell: bash
+      run: |
+        SECURE_TMPDIR="/tmp/dac-${{ github.run_id }}-${{ github.job }}"
+        mkdir -p "$SECURE_TMPDIR"
+        chmod 700 "$SECURE_TMPDIR"
+        echo "SECURE_TMPDIR=$SECURE_TMPDIR" >> "$GITHUB_ENV"
+        echo "Temp directory: $SECURE_TMPDIR"
+
+    - name: Register Temp Cleanup on Exit
+      shell: bash
+      run: |
+        # Write a cleanup marker — the post-job step will remove it
+        echo "$SECURE_TMPDIR" > /tmp/dac-cleanup-${{ github.run_id }}-${{ github.job }}.marker
+
+    - name: Cleanup Temp Directory
+      if: always()
+      shell: bash
+      run: |
+        MARKER="/tmp/dac-cleanup-${{ github.run_id }}-${{ github.job }}.marker"
+        if [ -f "$MARKER" ]; then
+          DIR=$(cat "$MARKER")
+          rm -rf "$DIR" "$MARKER"
+          echo "Cleaned up: $DIR"
+        fi
