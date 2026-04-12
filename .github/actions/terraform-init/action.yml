@@ -16,10 +16,17 @@ runs:
 
     - name: Commit Formatted Files
       shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
       run: |
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          echo "PR build — skipping format commit"
+          exit 0
+        fi
+        
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
-        git remote set-url origin https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+        git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}
         
         if git diff --quiet; then
           echo "No formatting changes to commit"

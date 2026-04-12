@@ -46,6 +46,9 @@ defaults:
   run:
     shell: bash
 
+permissions:
+  contents: write
+
 # =============================================================================
 # JOB 1 — Preflight
 # Purpose: Fail fast. Confirm Splunk is reachable and emit a
