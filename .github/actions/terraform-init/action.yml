@@ -1,28 +1,15 @@
-name: "Setup Terraform Environment"
-description: "Exports Splunk secrets as TF_VAR_* env vars"
-
-inputs:
-  splunk_url:
-    description: "Splunk instance URL"
-    required: true
-  splunk_username:
-    description: "Splunk admin username"
-    required: true
-  splunk_password:
-    description: "Splunk admin password"
-    required: true
-  alert_email:
-    description: "Email address for Splunk alerts"
-    required: true
+name: "Terraform Init"
+description: "Initialises Terraform then checks formatting"
 
 runs:
   using: "composite"
   steps:
-    - name: Export Terraform Variables
+    - name: Terraform Init
       shell: bash
-      run: |
-        echo "TF_VAR_splunk_url=${{ inputs.splunk_url }}"          >> "$GITHUB_ENV"
-        echo "TF_VAR_splunk_username=${{ inputs.splunk_username }}" >> "$GITHUB_ENV"
-        echo "TF_VAR_splunk_password=${{ inputs.splunk_password }}" >> "$GITHUB_ENV"
-        echo "TF_VAR_alert_email=${{ inputs.alert_email }}"         >> "$GITHUB_ENV"
-        echo "TF_VAR_insecure_skip_verify=true"                    >> "$GITHUB_ENV"
+      working-directory: terraform
+      run: terraform init -reconfigure
+
+    - name: Terraform Format
+      shell: bash
+      working-directory: terraform
+      run: terraform fmt -recursive
