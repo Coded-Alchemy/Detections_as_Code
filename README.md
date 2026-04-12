@@ -9,8 +9,10 @@ Key Benefits:
 - Consistent deployment across environments  
 - Rapid detection deployment  
 - Collaboration and peer review  
-- Rollback capabilities  
+- Rollback capabilities 
+
 -------  
+
 ## Technology Stack  
   
 | Component        | Technology        | Purpose                           |
@@ -23,21 +25,32 @@ Key Benefits:
 | Version Control  | Git/GitHub        | Source control and collaboration  |
 
 --------------
+
 ## Architecture
+
 <div align="center">
   <img src="diagrams/dac.arch.drawio.svg" alt="DaC Architecture" style="width: 100%;">
 </div>
 
+---
+
+## Documentation
+
+- [Documentation](./docs/DETECTION_PIPELINE.md) 
+
 --------------
+
 ## Workflow
 
 - Store Sigma rules in `rules/`  
 - Convert rules to Splunk SPL in CI  
 - Generate Terraform resources (splunk_saved_search) from generated SPL  
 - Apply Terraform to deploy saved searches and other Splunk infrastructure
+
 --------------
 
 ## Demonstrated Skills
+
 - DevOps/SecOps Practices
 	- Infrastructure as Code (Terraform)
 	- CI/CD pipeline design
@@ -64,8 +77,11 @@ Key Benefits:
 - Scalability
 	- Repeatable processes
 	- Environment consistency
+  
 -----------------
+
 ## Future Enhancements  
+
 - Multi-SIEM Support  
     - Add Elastic backend  
     - Add Sentinel backend  
