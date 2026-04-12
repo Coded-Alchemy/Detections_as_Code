@@ -1,0 +1,15 @@
+name: "Terraform Init"
+description: "Initialises Terraform then checks formatting"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Terraform Init
+      shell: bash
+      working-directory: terraform
+      run: terraform init -reconfigure
+
+    - name: Terraform Format
+      shell: bash
+      working-directory: terraform
+      run: terraform fmt -recursive
