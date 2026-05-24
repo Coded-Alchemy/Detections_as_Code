@@ -18,6 +18,11 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Setup Node.js 24
+      uses: actions/setup-node@v4
+      with:
+        node-version: "24"
+
     - name: Export Terraform Variables
       shell: bash
       run: |
