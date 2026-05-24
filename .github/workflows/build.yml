@@ -413,12 +413,13 @@ jobs:
       - name: Terraform Plan
         working-directory: terraform
         run: |
-          terraform plan -out=tfplan 2>&1 | tee "$SECURE_TMPDIR/tf_plan_output.txt"
+          terraform plan -out=tfplan 2>&1 | tee /tmp/tf_plan_output.txt
 
-          echo "### Terraform Plan"                   >> "$GITHUB_STEP_SUMMARY"
-          echo "\`\`\`"                               >> "$GITHUB_STEP_SUMMARY"
-          cat "$SECURE_TMPDIR/tf_plan_output.txt"    >> "$GITHUB_STEP_SUMMARY"
-          echo "\`\`\`"                               >> "$GITHUB_STEP_SUMMARY"
+          echo "### Terraform Plan"     >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`"                 >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/tf_plan_output.txt  >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`"                 >> "$GITHUB_STEP_SUMMARY"
+          rm -f /tmp/tf_plan_output.txt
 
       - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
@@ -495,12 +496,13 @@ jobs:
       - name: Terraform Apply
         working-directory: terraform
         run: |
-          terraform apply -auto-approve tfplan 2>&1 | tee "$SECURE_TMPDIR/tf_apply_output.txt"
+          terraform apply -auto-approve tfplan 2>&1 | tee /tmp/tf_apply_output.txt
 
-          echo "### Terraform Apply"                  >> "$GITHUB_STEP_SUMMARY"
-          echo "\`\`\`"                               >> "$GITHUB_STEP_SUMMARY"
-          cat "$SECURE_TMPDIR/tf_apply_output.txt"   >> "$GITHUB_STEP_SUMMARY"
-          echo "\`\`\`"                               >> "$GITHUB_STEP_SUMMARY"
+          echo "### Terraform Apply"     >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`"                  >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/tf_apply_output.txt  >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`"                  >> "$GITHUB_STEP_SUMMARY"
+          rm -f /tmp/tf_apply_output.txt
 
       - name: Emit Deployment Summary
         run: |
