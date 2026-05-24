@@ -1,51 +1,516 @@
-name: "Terraform Init"
-description: "Initialises Terraform then formats and commits any changes"
+# ============================================================
+# GitHub Actions Workflow: Detection Engineering Pipeline
+# ============================================================
+#
+# Job execution order:
+#
+#   [1] preflight      Splunk health check · detection diff summary
+#        │
+#       [2] validate   Sigma schema lint · rule count gate
+#        │
+#       [3] build      Install deps · generate locals.tf artifact
+#        │
+#    ┌───┴───┐
+#   [4]     [5]        (parallel)
+#  convert  tf-init    Sigma→SPL  |  provider cache + fmt + init
+#    └───┬───┘
+#        │
+#       [6] tf-state-sync   pre-cleanup → import → stale cleanup
+#        │
+#       [7] tf-validate     validate each resource against Splunk
+#        │
+#       [8] tf-plan         terraform plan · post plan to PR
+#        │
+#       [9] tf-apply        (main branch only, requires approval)
+#                           terraform apply · post apply summary
+#
+# Security posture:
+#   - TLS verification enabled by default; disabled only via
+#     SPLUNK_TLS_SKIP=true (lab environments only)
+#   - All temp files are job-scoped via the secure-tmpdir action
+#   - Secrets injected once per job via composite action
+#   - Terraform provider cache keyed to lock file hash
+#   - Apply requires manual approval via GitHub environment gate
+#   - continue-on-error removed from state sync — failures surface
+# ============================================================
 
-runs:
-  using: "composite"
-  steps:
-    - name: Setup Node.js 24
-      uses: actions/setup-node@v4
-      with:
-        node-version: "24"
+name: Detection Engineering Pipeline
 
-    - name: Install Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: "~1.9"
+on:
+  push:
+    branches: ["main", "dev"]
+  pull_request:
+    branches: ["main", "dev"]
 
-    - name: Add Terraform to PATH
-      shell: bash
-      run: echo "$TERRAFORM_CLI_PATH" >> "$GITHUB_PATH"
+defaults:
+  run:
+    shell: bash
 
-    - name: Terraform Init
-      shell: bash
-      working-directory: terraform
-      run: terraform init -reconfigure
+permissions:
+  contents: write
 
-    - name: Terraform Format
-      shell: bash
-      working-directory: terraform
-      run: terraform fmt -recursive
+# =============================================================================
+# JOB 1 — Preflight
+# Purpose: Fail fast. Confirm Splunk is reachable and emit a
+#          human-readable detection diff to the PR/push summary.
+# =============================================================================
+jobs:
+  preflight:
+    name: "Preflight"
+    runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 5
 
-    - name: Commit Formatted Files
-      shell: bash
-      env:
-        GH_TOKEN: ${{ github.token }}
-      run: |
-        if [ "${{ github.event_name }}" = "pull_request" ]; then
-          echo "PR build — skipping format commit"
-          exit 0
-        fi
-        
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}
-        
-        if git diff --quiet; then
-          echo "No formatting changes to commit"
-        else
-          git add terraform/
-          git commit -m "style: terraform fmt auto-format [skip ci]"
-          git push origin HEAD:${{ github.ref_name }}
-        fi
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Splunk Health Check
+        uses: ./.github/actions/splunk-health-check
+        with:
+          splunk_url:      ${{ secrets.SPLUNK_URL }}
+          splunk_username: ${{ secrets.SPLUNK_USERNAME }}
+          splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
+
+      - name: Install Python Dependencies
+        run: python3 -m pip install --upgrade pip pyyaml
+
+      - name: Emit Detection Change Summary
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: python3 scripts/diff_detections.py
+
+# =============================================================================
+# JOB 2 — Validate
+# Purpose: Lint every Sigma rule against the required schema
+#          before any conversion or Terraform work begins.
+#          A single invalid rule fails the pipeline here.
+# =============================================================================
+  validate:
+    name: "Validate — Sigma Schema"
+    needs: preflight
+    runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install Python Dependencies
+        run: python3 -m pip install --upgrade pip pyyaml
+
+      - name: Validate Sigma Rules
+        run: python3 scripts/validate_sigma_rules.py
+
+# =============================================================================
+# JOB 3 — Build
+# Purpose: Generate locals.tf from the validated rule set and
+#          upload it as an artifact consumed by all downstream jobs.
+# =============================================================================
+  build:
+    name: "Build — Generate Terraform Locals"
+    needs: validate
+    runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Clean Workspace
+        run: |
+          rm -rf generated/
+          rm -f  terraform/locals.tf
+
+      - name: Install Python Dependencies
+        run: python3 -m pip install --upgrade pip pyyaml
+
+      - name: Generate Terraform Locals from Sigma Rules
+        run: |
+          python3 scripts/generate_locals.py
+
+          echo "### Generated Terraform Configuration" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`hcl"                             >> "$GITHUB_STEP_SUMMARY"
+          head -n 50 terraform/locals.tf               >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`"                                >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Generated Locals
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-locals
+          path: terraform/locals.tf
+          if-no-files-found: error
+
+# =============================================================================
+# JOB 4 — Convert  (runs in parallel with tf-init)
+# Purpose: Convert every Sigma rule to SPL and upload the
+#          resulting .spl files as the spl-detections artifact.
+# =============================================================================
+  convert:
+    name: "Convert — Sigma to SPL"
+    needs: build
+    runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install Sigma CLI
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install sigma-cli pysigma-backend-splunk
+
+      - name: Convert Sigma Rules to SPL
+        run: bash scripts/convert_sigma_to_spl.sh
+
+      - name: Upload SPL Detections Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: spl-detections
+          path: generated/splunk
+          if-no-files-found: error
+          compression-level: 6
+
+# =============================================================================
+# JOB 5 — Terraform Init  (runs in parallel with convert)
+# Purpose: Restore provider cache, format-check, and initialise
+#          Terraform. Uploads provider cache on cache miss.
+# =============================================================================
+  tf-init:
+    name: "Terraform — Format & Init"
+    needs: build
+    runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Download Generated Locals
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-locals
+          path: terraform/
+
+      - name: Setup Terraform Environment
+        uses: ./.github/actions/terraform-env
+        with:
+          splunk_url:      ${{ secrets.SPLUNK_URL }}
+          splunk_username: ${{ secrets.SPLUNK_USERNAME }}
+          splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
+          alert_email:     ${{ secrets.ALERT_EMAIL }}
+
+      - name: Restore Terraform Provider Cache
+        uses: ./.github/actions/terraform-cache
+
+      - name: Terraform Format & Init
+        uses: ./.github/actions/terraform-init
+
+# =============================================================================
+# JOB 6 — Terraform State Sync
+# Purpose: Align state with reality before planning.
+#          All three state management steps must pass —
+#          errors are no longer silently swallowed.
+# =============================================================================
+  tf-state-sync:
+    name: "Terraform — State Sync"
+    needs: tf-init
+    runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 15
+
+    env:
+      SPLUNK_USERNAME: ${{ secrets.SPLUNK_USERNAME }}
+      SPLUNK_PASSWORD: ${{ secrets.SPLUNK_PASSWORD }}
+      SPLUNK_URL:      ${{ secrets.SPLUNK_URL }}
+      SPLUNK_TLS_SKIP: "true"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Create Secure Temp Directory
+        uses: ./.github/actions/secure-tmpdir
+
+      - name: Download Generated Locals
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-locals
+          path: terraform/
+
+      - name: Download SPL Detections
+        uses: actions/download-artifact@v4
+        with:
+          name: spl-detections
+          path: generated/splunk/
+
+      - name: Setup Terraform Environment
+        uses: ./.github/actions/terraform-env
+        with:
+          splunk_url:      ${{ secrets.SPLUNK_URL }}
+          splunk_username: ${{ secrets.SPLUNK_USERNAME }}
+          splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
+          alert_email:     ${{ secrets.ALERT_EMAIL }}
+
+      - name: Restore Terraform Provider Cache
+        uses: ./.github/actions/terraform-cache
+
+      - name: Terraform Init
+        uses: ./.github/actions/terraform-init
+
+      - name: Pre-Cleanup Broken State Entries
+        working-directory: terraform
+        run: bash ../scripts/pre_cleanup_state.sh
+
+      - name: Import Existing Splunk Saved Searches
+        working-directory: terraform
+        run: bash ../scripts/import_splunk_searches.sh
+
+      - name: Clean Up Stale State Entries
+        working-directory: terraform
+        run: bash ../scripts/cleanup_stale_state.sh
+
+# =============================================================================
+# JOB 7 — Validate Resources
+# Purpose: Confirm every state resource exists in Splunk.
+#          Hard failure — no silent pass-through.
+# =============================================================================
+  tf-validate:
+    name: "Terraform — Validate Resources"
+    needs: tf-state-sync
+    runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 10
+
+    env:
+      SPLUNK_USERNAME: ${{ secrets.SPLUNK_USERNAME }}
+      SPLUNK_PASSWORD: ${{ secrets.SPLUNK_PASSWORD }}
+      SPLUNK_URL:      ${{ secrets.SPLUNK_URL }}
+      SPLUNK_TLS_SKIP: "true"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Create Secure Temp Directory
+        uses: ./.github/actions/secure-tmpdir
+
+      - name: Download Generated Locals
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-locals
+          path: terraform/
+
+      - name: Download SPL Detections
+        uses: actions/download-artifact@v4
+        with:
+          name: spl-detections
+          path: generated/splunk/
+
+      - name: Setup Terraform Environment
+        uses: ./.github/actions/terraform-env
+        with:
+          splunk_url:      ${{ secrets.SPLUNK_URL }}
+          splunk_username: ${{ secrets.SPLUNK_USERNAME }}
+          splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
+          alert_email:     ${{ secrets.ALERT_EMAIL }}
+
+      - name: Restore Terraform Provider Cache
+        uses: ./.github/actions/terraform-cache
+
+      - name: Terraform Init
+        uses: ./.github/actions/terraform-init
+
+      - name: Validate Resources Against Splunk
+        working-directory: terraform
+        run: bash ../scripts/validate_splunk_resources.sh
+
+# =============================================================================
+# JOB 8 — Terraform Plan
+# Purpose: Generate a plan. Converges both the convert and
+#          tf-validate branches so the plan only runs when
+#          SPL conversion and state validation both passed.
+# =============================================================================
+  tf-plan:
+    name: "Terraform — Plan"
+    needs: [convert, tf-validate]
+    runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Create Secure Temp Directory
+        uses: ./.github/actions/secure-tmpdir
+
+      - name: Download Generated Locals
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-locals
+          path: terraform/
+
+      - name: Download SPL Detections
+        uses: actions/download-artifact@v4
+        with:
+          name: spl-detections
+          path: generated/splunk/
+
+      - name: Setup Terraform Environment
+        uses: ./.github/actions/terraform-env
+        with:
+          splunk_url:      ${{ secrets.SPLUNK_URL }}
+          splunk_username: ${{ secrets.SPLUNK_USERNAME }}
+          splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
+          alert_email:     ${{ secrets.ALERT_EMAIL }}
+
+      - name: Restore Terraform Provider Cache
+        uses: ./.github/actions/terraform-cache
+
+      - name: Terraform Init
+        uses: ./.github/actions/terraform-init
+
+      - name: Terraform Plan
+        working-directory: terraform
+        run: |
+          terraform plan -out=tfplan 2>&1 | tee /tmp/tf_plan_output.txt
+
+          echo "### Terraform Plan"     >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`"                 >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/tf_plan_output.txt  >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`"                 >> "$GITHUB_STEP_SUMMARY"
+          rm -f /tmp/tf_plan_output.txt
+
+      - name: Upload Plan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: terraform/tfplan
+          if-no-files-found: error
+          retention-days: 7
+
+# =============================================================================
+# JOB 9 — Terraform Apply
+# Purpose: Apply the saved plan to Splunk. Runs only on pushes
+#          to main (never on PRs). Requires manual approval via
+#          the "production" GitHub environment before executing.
+#
+# One-time setup required:
+#   GitHub → Settings → Environments → "production"
+#     → Add required reviewers (SOC lead / detection team lead)
+#     → Enable "Prevent self-review"
+#     → Optionally restrict to the main branch only
+# =============================================================================
+  tf-apply:
+    name: "Terraform — Apply"
+    needs: tf-plan
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 20
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Create Secure Temp Directory
+        uses: ./.github/actions/secure-tmpdir
+
+      - name: Download Generated Locals
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-locals
+          path: terraform/
+
+      - name: Download SPL Detections
+        uses: actions/download-artifact@v4
+        with:
+          name: spl-detections
+          path: generated/splunk/
+
+      - name: Download Saved Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan
+          path: terraform/
+
+      - name: Setup Terraform Environment
+        uses: ./.github/actions/terraform-env
+        with:
+          splunk_url:      ${{ secrets.SPLUNK_URL }}
+          splunk_username: ${{ secrets.SPLUNK_USERNAME }}
+          splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
+          alert_email:     ${{ secrets.ALERT_EMAIL }}
+
+      - name: Restore Terraform Provider Cache
+        uses: ./.github/actions/terraform-cache
+
+      - name: Terraform Init
+        uses: ./.github/actions/terraform-init
+
+      - name: Terraform Apply
+        working-directory: terraform
+        run: |
+          terraform apply -auto-approve tfplan 2>&1 | tee /tmp/tf_apply_output.txt
+
+          echo "### Terraform Apply"     >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`"                  >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/tf_apply_output.txt  >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`"                  >> "$GITHUB_STEP_SUMMARY"
+          rm -f /tmp/tf_apply_output.txt
+
+      - name: Emit Deployment Summary
+        run: |
+          echo "### Deployment Complete"                             >> "$GITHUB_STEP_SUMMARY"
+          echo ""                                                    >> "$GITHUB_STEP_SUMMARY"
+          echo "| Field  | Value |"                                  >> "$GITHUB_STEP_SUMMARY"
+          echo "|--------|-------|"                                  >> "$GITHUB_STEP_SUMMARY"
+          echo "| Commit | \`${{ github.sha }}\` |"                 >> "$GITHUB_STEP_SUMMARY"
+          echo "| Branch | \`${{ github.ref_name }}\` |"            >> "$GITHUB_STEP_SUMMARY"
+          echo "| Actor  | ${{ github.actor }} |"                   >> "$GITHUB_STEP_SUMMARY"
+          echo "| Time   | $(date -u '+%Y-%m-%d %H:%M UTC') |"     >> "$GITHUB_STEP_SUMMARY"
