@@ -9,6 +9,11 @@ runs:
       with:
         node-version: "24"
 
+    - name: Install Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: "~1.9"
+
     - name: Terraform Init
       shell: bash
       working-directory: terraform
