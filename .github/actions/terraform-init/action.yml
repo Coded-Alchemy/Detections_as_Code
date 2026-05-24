@@ -14,6 +14,10 @@ runs:
       with:
         terraform_version: "~1.9"
 
+    - name: Add Terraform to PATH
+      shell: bash
+      run: echo "$TERRAFORM_CLI_PATH" >> "$GITHUB_PATH"
+
     - name: Terraform Init
       shell: bash
       working-directory: terraform
