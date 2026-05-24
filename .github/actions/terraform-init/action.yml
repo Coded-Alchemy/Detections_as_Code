@@ -4,6 +4,11 @@ description: "Initialises Terraform then formats and commits any changes"
 runs:
   using: "composite"
   steps:
+    - name: Setup Node.js 24
+      uses: actions/setup-node@v4
+      with:
+        node-version: "24"
+
     - name: Terraform Init
       shell: bash
       working-directory: terraform
