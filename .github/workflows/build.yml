@@ -62,7 +62,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
         with:
           fetch-depth: 0
 
@@ -75,6 +75,11 @@ jobs:
 
       - name: Install Python Dependencies
         run: python3 -m pip install --upgrade pip pyyaml
+
+      - name: Install Sigma CLI
+        run: |
+            python3 -m pip install --upgrade pip
+            pip install sigma-cli pysigma-backend-splunk
 
       - name: Emit Detection Change Summary
         env:
@@ -95,7 +100,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
 
       - name: Install Python Dependencies
         run: python3 -m pip install --upgrade pip pyyaml
@@ -116,7 +121,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
 
       - name: Clean Workspace
         run: |
@@ -155,7 +160,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
 
       - name: Convert Sigma Rules to SPL
         run: bash scripts/convert_sigma_to_spl.sh
@@ -181,7 +186,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
 
       - name: Download Generated Locals
         uses: actions/download-artifact@v4
@@ -223,7 +228,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
 
       - name: Create Secure Temp Directory
         uses: ./.github/actions/secure-tmpdir
@@ -285,7 +290,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
 
       - name: Create Secure Temp Directory
         uses: ./.github/actions/secure-tmpdir
@@ -334,7 +339,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
 
       - name: Download Generated Locals
         uses: actions/download-artifact@v4
@@ -403,7 +408,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
 
       - name: Download Generated Locals
         uses: actions/download-artifact@v4

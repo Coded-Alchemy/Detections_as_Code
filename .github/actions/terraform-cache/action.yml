@@ -4,6 +4,11 @@ description: "Restores or seeds the .terraform provider cache"
 runs:
   using: "composite"
   steps:
+    - name: Setup Node.js 24
+      uses: actions/setup-node@v4
+      with:
+        node-version: "24"
+
     - name: Cache Terraform Providers
       uses: actions/cache@v4
       with:
