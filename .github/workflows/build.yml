@@ -66,6 +66,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
       - name: Splunk Health Check
         uses: ./.github/actions/splunk-health-check
         with:
@@ -75,11 +80,6 @@ jobs:
 
       - name: Install Python Dependencies
         run: python3 -m pip install --upgrade pip pyyaml
-
-      - name: Install Sigma CLI
-        run: |
-            python3 -m pip install --upgrade pip
-            pip install sigma-cli pysigma-backend-splunk
 
       - name: Emit Detection Change Summary
         env:
@@ -102,6 +102,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
 
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
       - name: Install Python Dependencies
         run: python3 -m pip install --upgrade pip pyyaml
 
@@ -122,6 +127,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
 
       - name: Clean Workspace
         run: |
@@ -162,6 +172,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
 
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install Sigma CLI
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install sigma-cli pysigma-backend-splunk
+
       - name: Convert Sigma Rules to SPL
         run: bash scripts/convert_sigma_to_spl.sh
 
@@ -187,6 +207,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
 
       - name: Download Generated Locals
         uses: actions/download-artifact@v4
@@ -229,6 +254,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
 
       - name: Create Secure Temp Directory
         uses: ./.github/actions/secure-tmpdir
@@ -292,6 +322,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
 
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
       - name: Create Secure Temp Directory
         uses: ./.github/actions/secure-tmpdir
 
@@ -341,6 +376,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
 
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Create Secure Temp Directory
+        uses: ./.github/actions/secure-tmpdir
+
       - name: Download Generated Locals
         uses: actions/download-artifact@v4
         with:
@@ -370,13 +413,12 @@ jobs:
       - name: Terraform Plan
         working-directory: terraform
         run: |
-          terraform plan -out=tfplan 2>&1 | tee /tmp/tf_plan_output.txt
+          terraform plan -out=tfplan 2>&1 | tee "$SECURE_TMPDIR/tf_plan_output.txt"
 
-          echo "### Terraform Plan"     >> "$GITHUB_STEP_SUMMARY"
-          echo "\`\`\`"                 >> "$GITHUB_STEP_SUMMARY"
-          cat /tmp/tf_plan_output.txt  >> "$GITHUB_STEP_SUMMARY"
-          echo "\`\`\`"                 >> "$GITHUB_STEP_SUMMARY"
-          rm -f /tmp/tf_plan_output.txt
+          echo "### Terraform Plan"                   >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`"                               >> "$GITHUB_STEP_SUMMARY"
+          cat "$SECURE_TMPDIR/tf_plan_output.txt"    >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`"                               >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
@@ -409,6 +451,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Create Secure Temp Directory
+        uses: ./.github/actions/secure-tmpdir
 
       - name: Download Generated Locals
         uses: actions/download-artifact@v4
@@ -445,13 +495,12 @@ jobs:
       - name: Terraform Apply
         working-directory: terraform
         run: |
-          terraform apply -auto-approve tfplan 2>&1 | tee /tmp/tf_apply_output.txt
+          terraform apply -auto-approve tfplan 2>&1 | tee "$SECURE_TMPDIR/tf_apply_output.txt"
 
-          echo "### Terraform Apply"     >> "$GITHUB_STEP_SUMMARY"
-          echo "\`\`\`"                  >> "$GITHUB_STEP_SUMMARY"
-          cat /tmp/tf_apply_output.txt  >> "$GITHUB_STEP_SUMMARY"
-          echo "\`\`\`"                  >> "$GITHUB_STEP_SUMMARY"
-          rm -f /tmp/tf_apply_output.txt
+          echo "### Terraform Apply"                  >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`"                               >> "$GITHUB_STEP_SUMMARY"
+          cat "$SECURE_TMPDIR/tf_apply_output.txt"   >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`"                               >> "$GITHUB_STEP_SUMMARY"
 
       - name: Emit Deployment Summary
         run: |
