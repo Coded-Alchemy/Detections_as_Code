@@ -166,7 +166,6 @@ jobs:
             pysigma-pipeline-sysmon \
             pysigma-pipeline-windows \
             pysigma-pipeline-sysmon-linux \
-            pysigma-pipeline-linux
 
       - name: Convert Sigma Rules to SPL
         run: bash scripts/convert_sigma_to_spl.sh
