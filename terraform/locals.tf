@@ -153,7 +153,7 @@ locals {
 
     # Encoded/Obfuscated Command Execution
     encoded_obfuscated_command_execution = {
-      name        = "Encoded/Obfuscated Command Execution"
+      name        = "Encoded/Obfuscated_Command_Execution"
       description = "Detects execution of encoded or obfuscated commands" # Truncated to 200 chars
       spl_file    = "encoded_obfuscated_command_execution.spl"
 
