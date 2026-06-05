@@ -403,7 +403,6 @@ jobs:
 #     → Optionally restrict to the main branch only
 # =============================================================================
   tf-apply:
-    name: "Terraform — Apply"
     needs: tf-plan
     if: github.ref == 'refs/heads/main' && github.event.pull_request.merged == true
     runs-on: [self-hosted, linux, x64]
