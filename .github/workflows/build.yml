@@ -404,10 +404,8 @@ jobs:
 # =============================================================================
   tf-apply:
     needs: tf-plan
-    if: |
-      github.ref == 'refs/heads/main' &&
-      (github.event_name == 'push' || github.event_name == 'merge_group')
-    runs-on: [ self-hosted, linux, x64 ]
+    if: github.ref == 'refs/heads/main' && github.event.pull_request.merged == true
+    runs-on: [self-hosted, linux, x64]
     timeout-minutes: 20
 
     steps:
