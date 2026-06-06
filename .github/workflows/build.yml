@@ -405,7 +405,7 @@ jobs:
   tf-apply:
     name: "Terraform — Apply"
     needs: tf-plan
-    if: github.ref == 'refs/heads/main' && github.event.pull_request.merged == true
+    if: github.ref == 'refs/heads/main'
     runs-on: [self-hosted, linux, x64]
     timeout-minutes: 20
 
