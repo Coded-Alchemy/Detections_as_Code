@@ -405,9 +405,10 @@ jobs:
   tf-apply:
     name: "Terraform — Apply"
     needs: tf-plan
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: [self-hosted, linux, x64]
     timeout-minutes: 20
+    environment: production
 
     steps:
       - name: Checkout
