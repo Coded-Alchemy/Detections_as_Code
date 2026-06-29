@@ -1,7 +1,19 @@
 # macros.tf
 
+locals {
+  macros_app   = "search"
+  macros_owner = "splunk"
+}
+
 resource "splunk_configs_conf" "macro_port_to_service" {
   name = "macros/port_to_service(1)"
+
+  acl {
+    app   = local.macros_app
+    owner = local.macros_owner
+    read  = ["*"]
+    write = ["admin", "power"]
+  }
 
   variables = {
     args        = "port"
@@ -37,23 +49,20 @@ resource "splunk_configs_conf" "macro_port_to_service" {
         $port$=3389, "RDP",
         $port$=4444, "Metasploit Default",
         $port$=4899, "Radmin",
+        $port$=5514, "pfSense Logs",
         $port$=5900, "VNC",
         $port$=6667, "IRC",
         $port$=8080, "HTTP Proxy",
+        $port$=8089, "Splunk Deployment",
         $port$=8443, "HTTPS Alt",
+        $port$=8888, "Caldera Agent",
         $port$=9200, "Elasticsearch",
+        $port$=9997, "Splunk Forwarder",
         $port$=27017,"MongoDB",
         true,        "Unknown"
       )
     EOT
     iseval      = "1"
     description = "Returns the service name for a given port number. Usage: eval service=`port_to_service(dest_port)`"
-  }
-
-  acl {
-    app   = "search"
-    owner = "splunk"
-    read  = ["*"]
-    write = ["admin", "power"]
   }
 }

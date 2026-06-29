@@ -18,7 +18,14 @@
 # `app` at both the top level and inside `acl`); fixed below.
 
 locals {
-  workflow_actions_app = "search"
+  workflow_actions_app                   = "search"
+  workflow_actions_sharing               = "app"
+  workflow_actions_owner                 = "splunk"
+  workflow_actions_type_link             = "link"
+  workflow_actions_type_search           = "search"
+  workflow_actions_link_method_get       = "get"
+  workflow_actions_target                = "blank"
+  workflow_actions_display_location_both = "both"
 }
 
 # ---------------------------------------------------------------------------
@@ -30,16 +37,17 @@ resource "splunk_configs_conf" "vt_lookup_src_ip" {
   name = "workflow_actions/VT_Lookup_src_ip"
   acl {
     app     = local.workflow_actions_app
-    sharing = "app"
+    sharing = local.workflow_actions_sharing
+    owner   = local.workflow_actions_owner
   }
   variables = {
-    type             = "link"
+    type             = local.workflow_actions_type_link
     label            = "VirusTotal Lookup: $src_ip$"
     fields           = "src_ip"
-    "link.method"    = "get"
-    "link.target"    = "blank"
+    "link.method"    = local.workflow_actions_link_method_get
+    "link.target"    = local.workflow_actions_target
     "link.uri"       = "https://www.virustotal.com/gui/search?query=$src_ip$"
-    display_location = "both"
+    display_location = local.workflow_actions_display_location_both
   }
 }
 
@@ -47,33 +55,35 @@ resource "splunk_configs_conf" "vt_lookup_dest_ip" {
   name = "workflow_actions/VT_Lookup_dest_ip"
   acl {
     app     = local.workflow_actions_app
-    sharing = "app"
+    sharing = local.workflow_actions_sharing
+    owner   = local.workflow_actions_owner
   }
   variables = {
-    type             = "link"
+    type             = local.workflow_actions_type_link
     label            = "VirusTotal Lookup: $dest_ip$"
     fields           = "dest_ip"
-    "link.method"    = "get"
-    "link.target"    = "blank"
+    "link.method"    = local.workflow_actions_link_method_get
+    "link.target"    = local.workflow_actions_target
     "link.uri"       = "https://www.virustotal.com/gui/search?query=$dest_ip$"
-    display_location = "both"
+    display_location = local.workflow_actions_display_location_both
   }
 }
 
 resource "splunk_configs_conf" "vt_lookup_ip" {
-  name = "workflow_actions/VT_Lookup_ip"
+  name = "workflow_actions/VT_Lookup_src"
   acl {
     app     = local.workflow_actions_app
-    sharing = "app"
+    sharing = local.workflow_actions_sharing
+    owner   = local.workflow_actions_owner
   }
   variables = {
-    type             = "link"
-    label            = "VirusTotal Lookup: $ip$"
-    fields           = "ip"
-    "link.method"    = "get"
-    "link.target"    = "blank"
+    type             = local.workflow_actions_type_link
+    label            = "VirusTotal Lookup: $src$"
+    fields           = "src"
+    "link.method"    = local.workflow_actions_link_method_get
+    "link.target"    = local.workflow_actions_target
     "link.uri"       = "https://www.virustotal.com/gui/search?query=$ip$"
-    display_location = "both"
+    display_location = local.workflow_actions_display_location_both
   }
 }
 
@@ -81,16 +91,17 @@ resource "splunk_configs_conf" "vt_lookup_dest" {
   name = "workflow_actions/VT_Lookup_dest"
   acl {
     app     = local.workflow_actions_app
-    sharing = "app"
+    sharing = local.workflow_actions_sharing
+    owner   = local.workflow_actions_owner
   }
   variables = {
-    type             = "link"
+    type             = local.workflow_actions_type_link
     label            = "VirusTotal Lookup: $dest$"
     fields           = "dest"
-    "link.method"    = "get"
-    "link.target"    = "blank"
+    "link.method"    = local.workflow_actions_link_method_get
+    "link.target"    = local.workflow_actions_target
     "link.uri"       = "https://www.virustotal.com/gui/search?query=$dest$"
-    display_location = "both"
+    display_location = local.workflow_actions_display_location_both
   }
 }
 
@@ -102,16 +113,17 @@ resource "splunk_configs_conf" "vt_lookup_sha256" {
   name = "workflow_actions/VT_Lookup_sha256"
   acl {
     app     = local.workflow_actions_app
-    sharing = "app"
+    sharing = local.workflow_actions_sharing
+    owner   = local.workflow_actions_owner
   }
   variables = {
-    type             = "link"
+    type             = local.workflow_actions_type_link
     label            = "VirusTotal Lookup: $sha256$"
     fields           = "sha256"
-    "link.method"    = "get"
-    "link.target"    = "blank"
+    "link.method"    = local.workflow_actions_link_method_get
+    "link.target"    = local.workflow_actions_target
     "link.uri"       = "https://www.virustotal.com/gui/search?query=$sha256$"
-    display_location = "both"
+    display_location = local.workflow_actions_display_location_both
   }
 }
 
@@ -123,16 +135,17 @@ resource "splunk_configs_conf" "abuseipdb_src_ip" {
   name = "workflow_actions/AbuseIPDB_src_ip"
   acl {
     app     = local.workflow_actions_app
-    sharing = "app"
+    sharing = local.workflow_actions_sharing
+    owner   = local.workflow_actions_owner
   }
   variables = {
-    type             = "link"
+    type             = local.workflow_actions_type_link
     label            = "AbuseIPDB Check: $src_ip$"
     fields           = "src_ip"
-    "link.method"    = "get"
-    "link.target"    = "blank"
+    "link.method"    = local.workflow_actions_link_method_get
+    "link.target"    = local.workflow_actions_target
     "link.uri"       = "https://www.abuseipdb.com/check/$src_ip$"
-    display_location = "both"
+    display_location = local.workflow_actions_display_location_both
   }
 }
 
@@ -140,16 +153,17 @@ resource "splunk_configs_conf" "abuseipdb_dest_ip" {
   name = "workflow_actions/AbuseIPDB_dest_ip"
   acl {
     app     = local.workflow_actions_app
-    sharing = "app"
+    sharing = local.workflow_actions_sharing
+    owner   = local.workflow_actions_owner
   }
   variables = {
-    type             = "link"
+    type             = local.workflow_actions_type_link
     label            = "AbuseIPDB Check: $dest_ip$"
     fields           = "dest_ip"
-    "link.method"    = "get"
-    "link.target"    = "blank"
+    "link.method"    = local.workflow_actions_link_method_get
+    "link.target"    = local.workflow_actions_target
     "link.uri"       = "https://www.abuseipdb.com/check/$dest_ip$"
-    display_location = "both"
+    display_location = local.workflow_actions_display_location_both
   }
 }
 
@@ -161,16 +175,17 @@ resource "splunk_configs_conf" "shodan_src_ip" {
   name = "workflow_actions/Shodan_src_ip"
   acl {
     app     = local.workflow_actions_app
-    sharing = "app"
+    sharing = local.workflow_actions_sharing
+    owner   = local.workflow_actions_owner
   }
   variables = {
-    type             = "link"
+    type             = local.workflow_actions_type_link
     label            = "Shodan Host Lookup: $src_ip$"
     fields           = "src_ip"
-    "link.method"    = "get"
-    "link.target"    = "blank"
+    "link.method"    = local.workflow_actions_link_method_get
+    "link.target"    = local.workflow_actions_target
     "link.uri"       = "https://www.shodan.io/host/$src_ip$"
-    display_location = "both"
+    display_location = local.workflow_actions_display_location_both
   }
 }
 
@@ -178,16 +193,17 @@ resource "splunk_configs_conf" "shodan_dest_ip" {
   name = "workflow_actions/Shodan_dest_ip"
   acl {
     app     = local.workflow_actions_app
-    sharing = "app"
+    sharing = local.workflow_actions_sharing
+    owner   = local.workflow_actions_owner
   }
   variables = {
-    type             = "link"
+    type             = local.workflow_actions_type_link
     label            = "Shodan Host Lookup: $dest_ip$"
     fields           = "dest_ip"
-    "link.method"    = "get"
-    "link.target"    = "blank"
+    "link.method"    = local.workflow_actions_link_method_get
+    "link.target"    = local.workflow_actions_target
     "link.uri"       = "https://www.shodan.io/host/$dest_ip$"
-    display_location = "both"
+    display_location = local.workflow_actions_display_location_both
   }
 }
 
@@ -205,18 +221,19 @@ resource "splunk_configs_conf" "pivot_all_events_src_ip" {
   name = "workflow_actions/Pivot_AllEvents_src_ip"
   acl {
     app     = local.workflow_actions_app
-    sharing = "app"
+    sharing = local.workflow_actions_sharing
+    owner   = local.workflow_actions_owner
   }
   variables = {
-    type                   = "search"
+    type                   = local.workflow_actions_type_search
     label                  = "Pivot: All events for $src_ip$ (24h)"
     fields                 = "src_ip"
     "search.search_string" = "index=* src_ip=$src_ip$"
     "search.earliest"      = "-24h@h"
     "search.latest"        = "now"
     "search.app"           = local.workflow_actions_app
-    "search.target"        = "blank"
-    display_location       = "both"
+    "search.target"        = local.workflow_actions_target
+    display_location       = local.workflow_actions_display_location_both
   }
 }
 
@@ -224,17 +241,18 @@ resource "splunk_configs_conf" "pivot_user_activity" {
   name = "workflow_actions/Pivot_UserActivity"
   acl {
     app     = local.workflow_actions_app
-    sharing = "app"
+    sharing = local.workflow_actions_sharing
+    owner   = local.workflow_actions_owner
   }
   variables = {
-    type                   = "search"
+    type                   = local.workflow_actions_type_search
     label                  = "Pivot: User activity for $user$ (7d)"
     fields                 = "user"
     "search.search_string" = "index=* user=$user$"
     "search.earliest"      = "-7d@d"
     "search.latest"        = "now"
     "search.app"           = local.workflow_actions_app
-    "search.target"        = "blank"
-    display_location       = "both"
+    "search.target"        = local.workflow_actions_target
+    display_location       = local.workflow_actions_display_location_both
   }
 }
