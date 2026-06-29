@@ -66,3 +66,21 @@ resource "splunk_configs_conf" "macro_port_to_service" {
     description = "Returns the service name for a given port number. Usage: eval service=`port_to_service(dest_port)`"
   }
 }
+
+resource "splunk_configs_conf" "macro_format_time_ampm" {
+  name = "macros/format_time_ampm(1)"
+  acl {
+    app   = local.macros_app
+    owner = local.macros_owner
+    read  = ["*"]
+    write = ["admin", "power"]
+  }
+  variables = {
+    args        = "time_field"
+    definition  = <<-EOT
+      strftime($time_field$, "%Y-%m-%d %I:%M:%S %p")
+    EOT
+    iseval      = "1"
+    description = "Converts an epoch time field (e.g. _time) to a human-readable string in 12-hour AM/PM format. Usage: eval readable_time=`time_ampm(_time)`"
+  }
+}
