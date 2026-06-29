@@ -51,8 +51,8 @@ resource "splunk_configs_conf" "macro_port_to_service" {
   }
 
   acl {
-    app   = "malware_lab"
-    owner = "nobody"
+    app   = "search"
+    owner = "splunk"
     read  = ["*"]
     write = ["admin", "power"]
   }
