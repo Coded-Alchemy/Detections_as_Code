@@ -18,13 +18,13 @@
 # `app` at both the top level and inside `acl`); fixed below.
 
 locals {
-  workflow_actions_app = "search"
-  workflow_actions_sharing = "app"
-  workflow_actions_owner = "splunk"
-  workflow_actions_type_link = "link"
-  workflow_actions_type_search = "search"
-  workflow_actions_link_method_get = "get"
-  workflow_actions_target = "blank"
+  workflow_actions_app                   = "search"
+  workflow_actions_sharing               = "app"
+  workflow_actions_owner                 = "splunk"
+  workflow_actions_type_link             = "link"
+  workflow_actions_type_search           = "search"
+  workflow_actions_link_method_get       = "get"
+  workflow_actions_target                = "blank"
   workflow_actions_display_location_both = "both"
 }
 
@@ -38,7 +38,7 @@ resource "splunk_configs_conf" "vt_lookup_src_ip" {
   acl {
     app     = local.workflow_actions_app
     sharing = local.workflow_actions_sharing
-    owner = local.workflow_actions_owner
+    owner   = local.workflow_actions_owner
   }
   variables = {
     type             = local.workflow_actions_type_link
@@ -56,7 +56,7 @@ resource "splunk_configs_conf" "vt_lookup_dest_ip" {
   acl {
     app     = local.workflow_actions_app
     sharing = local.workflow_actions_sharing
-    owner = local.workflow_actions_owner
+    owner   = local.workflow_actions_owner
   }
   variables = {
     type             = local.workflow_actions_type_link
@@ -74,7 +74,7 @@ resource "splunk_configs_conf" "vt_lookup_ip" {
   acl {
     app     = local.workflow_actions_app
     sharing = local.workflow_actions_sharing
-    owner = local.workflow_actions_owner
+    owner   = local.workflow_actions_owner
   }
   variables = {
     type             = local.workflow_actions_type_link
@@ -92,7 +92,7 @@ resource "splunk_configs_conf" "vt_lookup_dest" {
   acl {
     app     = local.workflow_actions_app
     sharing = local.workflow_actions_sharing
-    owner = local.workflow_actions_owner
+    owner   = local.workflow_actions_owner
   }
   variables = {
     type             = local.workflow_actions_type_link
@@ -114,7 +114,7 @@ resource "splunk_configs_conf" "vt_lookup_sha256" {
   acl {
     app     = local.workflow_actions_app
     sharing = local.workflow_actions_sharing
-    owner = local.workflow_actions_owner
+    owner   = local.workflow_actions_owner
   }
   variables = {
     type             = local.workflow_actions_type_link
@@ -136,7 +136,7 @@ resource "splunk_configs_conf" "abuseipdb_src_ip" {
   acl {
     app     = local.workflow_actions_app
     sharing = local.workflow_actions_sharing
-    owner = local.workflow_actions_owner
+    owner   = local.workflow_actions_owner
   }
   variables = {
     type             = local.workflow_actions_type_link
@@ -154,7 +154,7 @@ resource "splunk_configs_conf" "abuseipdb_dest_ip" {
   acl {
     app     = local.workflow_actions_app
     sharing = local.workflow_actions_sharing
-    owner = local.workflow_actions_owner
+    owner   = local.workflow_actions_owner
   }
   variables = {
     type             = local.workflow_actions_type_link
@@ -176,7 +176,7 @@ resource "splunk_configs_conf" "shodan_src_ip" {
   acl {
     app     = local.workflow_actions_app
     sharing = local.workflow_actions_sharing
-    owner = local.workflow_actions_owner
+    owner   = local.workflow_actions_owner
   }
   variables = {
     type             = local.workflow_actions_type_link
@@ -194,7 +194,7 @@ resource "splunk_configs_conf" "shodan_dest_ip" {
   acl {
     app     = local.workflow_actions_app
     sharing = local.workflow_actions_sharing
-    owner = local.workflow_actions_owner
+    owner   = local.workflow_actions_owner
   }
   variables = {
     type             = local.workflow_actions_type_link
@@ -222,7 +222,7 @@ resource "splunk_configs_conf" "pivot_all_events_src_ip" {
   acl {
     app     = local.workflow_actions_app
     sharing = local.workflow_actions_sharing
-    owner = local.workflow_actions_owner
+    owner   = local.workflow_actions_owner
   }
   variables = {
     type                   = local.workflow_actions_type_search
@@ -242,7 +242,7 @@ resource "splunk_configs_conf" "pivot_user_activity" {
   acl {
     app     = local.workflow_actions_app
     sharing = local.workflow_actions_sharing
-    owner = local.workflow_actions_owner
+    owner   = local.workflow_actions_owner
   }
   variables = {
     type                   = local.workflow_actions_type_search

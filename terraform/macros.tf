@@ -1,7 +1,7 @@
 # macros.tf
 
 locals {
-  macros_app = "search"
+  macros_app   = "search"
   macros_owner = "splunk"
 }
 
