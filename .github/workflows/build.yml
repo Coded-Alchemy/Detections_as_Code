@@ -269,7 +269,7 @@ jobs:
 
       - name: Import Existing Splunk Saved Searches
         working-directory: terraform
-        run: bash ../scripts/import_splunk.sh
+        run: bash ../scripts/import_existing_searches.py
 
       - name: Clean Up Stale State Entries
         working-directory: terraform
