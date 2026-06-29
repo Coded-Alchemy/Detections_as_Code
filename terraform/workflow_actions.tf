@@ -33,13 +33,13 @@ resource "splunk_configs_conf" "vt_lookup_src_ip" {
     sharing = "app"
   }
   variables = {
-    type              = "link"
-    label             = "VirusTotal Lookup: $src_ip$"
-    fields            = "src_ip"
-    "link.method"     = "get"
-    "link.target"     = "blank"
-    "link.uri"        = "https://www.virustotal.com/gui/search?query=$src_ip$"
-    display_location  = "both"
+    type             = "link"
+    label            = "VirusTotal Lookup: $src_ip$"
+    fields           = "src_ip"
+    "link.method"    = "get"
+    "link.target"    = "blank"
+    "link.uri"       = "https://www.virustotal.com/gui/search?query=$src_ip$"
+    display_location = "both"
   }
 }
 
@@ -50,13 +50,13 @@ resource "splunk_configs_conf" "vt_lookup_dest_ip" {
     sharing = "app"
   }
   variables = {
-    type              = "link"
-    label             = "VirusTotal Lookup: $dest_ip$"
-    fields            = "dest_ip"
-    "link.method"     = "get"
-    "link.target"     = "blank"
-    "link.uri"        = "https://www.virustotal.com/gui/search?query=$dest_ip$"
-    display_location  = "both"
+    type             = "link"
+    label            = "VirusTotal Lookup: $dest_ip$"
+    fields           = "dest_ip"
+    "link.method"    = "get"
+    "link.target"    = "blank"
+    "link.uri"       = "https://www.virustotal.com/gui/search?query=$dest_ip$"
+    display_location = "both"
   }
 }
 
@@ -67,13 +67,13 @@ resource "splunk_configs_conf" "vt_lookup_ip" {
     sharing = "app"
   }
   variables = {
-    type              = "link"
-    label             = "VirusTotal Lookup: $ip$"
-    fields            = "ip"
-    "link.method"     = "get"
-    "link.target"     = "blank"
-    "link.uri"        = "https://www.virustotal.com/gui/search?query=$ip$"
-    display_location  = "both"
+    type             = "link"
+    label            = "VirusTotal Lookup: $ip$"
+    fields           = "ip"
+    "link.method"    = "get"
+    "link.target"    = "blank"
+    "link.uri"       = "https://www.virustotal.com/gui/search?query=$ip$"
+    display_location = "both"
   }
 }
 
@@ -84,13 +84,13 @@ resource "splunk_configs_conf" "vt_lookup_dest" {
     sharing = "app"
   }
   variables = {
-    type              = "link"
-    label             = "VirusTotal Lookup: $dest$"
-    fields            = "dest"
-    "link.method"     = "get"
-    "link.target"     = "blank"
-    "link.uri"        = "https://www.virustotal.com/gui/search?query=$dest$"
-    display_location  = "both"
+    type             = "link"
+    label            = "VirusTotal Lookup: $dest$"
+    fields           = "dest"
+    "link.method"    = "get"
+    "link.target"    = "blank"
+    "link.uri"       = "https://www.virustotal.com/gui/search?query=$dest$"
+    display_location = "both"
   }
 }
 
@@ -105,13 +105,13 @@ resource "splunk_configs_conf" "vt_lookup_sha256" {
     sharing = "app"
   }
   variables = {
-    type              = "link"
-    label             = "VirusTotal Lookup: $sha256$"
-    fields            = "sha256"
-    "link.method"     = "get"
-    "link.target"     = "blank"
-    "link.uri"        = "https://www.virustotal.com/gui/search?query=$sha256$"
-    display_location  = "both"
+    type             = "link"
+    label            = "VirusTotal Lookup: $sha256$"
+    fields           = "sha256"
+    "link.method"    = "get"
+    "link.target"    = "blank"
+    "link.uri"       = "https://www.virustotal.com/gui/search?query=$sha256$"
+    display_location = "both"
   }
 }
 
@@ -126,13 +126,13 @@ resource "splunk_configs_conf" "abuseipdb_src_ip" {
     sharing = "app"
   }
   variables = {
-    type              = "link"
-    label             = "AbuseIPDB Check: $src_ip$"
-    fields            = "src_ip"
-    "link.method"     = "get"
-    "link.target"     = "blank"
-    "link.uri"        = "https://www.abuseipdb.com/check/$src_ip$"
-    display_location  = "both"
+    type             = "link"
+    label            = "AbuseIPDB Check: $src_ip$"
+    fields           = "src_ip"
+    "link.method"    = "get"
+    "link.target"    = "blank"
+    "link.uri"       = "https://www.abuseipdb.com/check/$src_ip$"
+    display_location = "both"
   }
 }
 
@@ -143,13 +143,13 @@ resource "splunk_configs_conf" "abuseipdb_dest_ip" {
     sharing = "app"
   }
   variables = {
-    type              = "link"
-    label             = "AbuseIPDB Check: $dest_ip$"
-    fields            = "dest_ip"
-    "link.method"     = "get"
-    "link.target"     = "blank"
-    "link.uri"        = "https://www.abuseipdb.com/check/$dest_ip$"
-    display_location  = "both"
+    type             = "link"
+    label            = "AbuseIPDB Check: $dest_ip$"
+    fields           = "dest_ip"
+    "link.method"    = "get"
+    "link.target"    = "blank"
+    "link.uri"       = "https://www.abuseipdb.com/check/$dest_ip$"
+    display_location = "both"
   }
 }
 
@@ -164,13 +164,13 @@ resource "splunk_configs_conf" "shodan_src_ip" {
     sharing = "app"
   }
   variables = {
-    type              = "link"
-    label             = "Shodan Host Lookup: $src_ip$"
-    fields            = "src_ip"
-    "link.method"     = "get"
-    "link.target"     = "blank"
-    "link.uri"        = "https://www.shodan.io/host/$src_ip$"
-    display_location  = "both"
+    type             = "link"
+    label            = "Shodan Host Lookup: $src_ip$"
+    fields           = "src_ip"
+    "link.method"    = "get"
+    "link.target"    = "blank"
+    "link.uri"       = "https://www.shodan.io/host/$src_ip$"
+    display_location = "both"
   }
 }
 
@@ -181,13 +181,13 @@ resource "splunk_configs_conf" "shodan_dest_ip" {
     sharing = "app"
   }
   variables = {
-    type              = "link"
-    label             = "Shodan Host Lookup: $dest_ip$"
-    fields            = "dest_ip"
-    "link.method"     = "get"
-    "link.target"     = "blank"
-    "link.uri"        = "https://www.shodan.io/host/$dest_ip$"
-    display_location  = "both"
+    type             = "link"
+    label            = "Shodan Host Lookup: $dest_ip$"
+    fields           = "dest_ip"
+    "link.method"    = "get"
+    "link.target"    = "blank"
+    "link.uri"       = "https://www.shodan.io/host/$dest_ip$"
+    display_location = "both"
   }
 }
 
