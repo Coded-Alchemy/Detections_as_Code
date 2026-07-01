@@ -185,7 +185,7 @@ jobs:
         with:
           name: spl-detections
           path: generated/splunk
-          if-no-files-found: error
+          if-no-files-found: "error"
           compression-level: 6
 
       - name: Upload Conversion Diagnostics (errors)
