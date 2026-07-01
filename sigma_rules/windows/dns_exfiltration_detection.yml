@@ -21,9 +21,10 @@ detection:
             - 'TXT'
             - 'NULL'
             - 'MX'
-    condition: selection
-    timeframe: 5m
-    condition_count: selection | count(query) by src_ip > 100
+    filter:
+        query|count: '>100'
+    condition: selection | filter
+timeframe: 5m
 falsepositives:
     - CDN traffic
     - Legitimate DNS queries
