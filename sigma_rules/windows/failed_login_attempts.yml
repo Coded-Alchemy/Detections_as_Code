@@ -19,18 +19,19 @@ detection:
     selection:
         EventID: 4625  # An account failed to log on
     
-    # Filter out common false positives
     filter_system:
         TargetUserName|endswith:
             - '$'  # Computer accounts
-    
+
     filter_known:
-        TargetUserName:
-            - 'ANONYMOUS LOGON'
-            - 'DWM-*'
-            - 'UMFD-*'
-    
-    condition: selection and not filter_system and not filter_known
+        TargetUserName|startswith:
+            - 'DWM-'
+            - 'UMFD-'
+
+    filter_anonymous:
+        TargetUserName: 'ANONYMOUS LOGON'
+
+    condition: selection and not filter_system and not filter_known and not filter_anonymous
 
 falsepositives:
     - Legitimate failed logins from users who forgot passwords
