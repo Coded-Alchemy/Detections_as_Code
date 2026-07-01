@@ -6,7 +6,7 @@ while IFS= read -r rule_file; do
   file_name=$(basename "$rule_file" .yml)
   if sigma convert --target splunk \
       --pipeline splunk_windows \
-      --pipeline pipelines/lab_index_mapping.yml \
+      --pipeline .github/pipelines/lab_index_mapping.yml \
       "$rule_file" > "generated/splunk/${file_name}.spl" 2>&1; then
     if [ -s "generated/splunk/${file_name}.spl" ]; then
       echo "${file_name}.spl"
