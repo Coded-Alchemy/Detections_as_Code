@@ -28,7 +28,7 @@ detection:
             - 'join'
             - 'replace'
             - 'split'
-        CommandLine|re: '.*[\+\^\%].*'
+        CommandLine|re: '.*[+^%].*'
     condition: selection_encoding or selection_obfuscation
 falsepositives:
     - Legitimate encoded scripts
