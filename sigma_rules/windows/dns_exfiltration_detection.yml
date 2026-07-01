@@ -14,15 +14,16 @@ tags:
     - attack.command_and_control
 logsource:
     category: dns
+    index: windows
 detection:
     selection:
         record_type:
             - 'TXT'
             - 'NULL'
             - 'MX'
+        query|count(query): '>100'
     condition: selection
-    timeframe: 5m
-    condition_count: selection | count(query) by src_ip > 100
+timeframe: 5m
 falsepositives:
     - CDN traffic
     - Legitimate DNS queries

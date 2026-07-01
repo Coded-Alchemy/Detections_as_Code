@@ -14,6 +14,7 @@ tags:
 logsource:
     category: process_creation
     product: windows
+    index: windows
 detection:
     selection_tool:
         Image|endswith:
@@ -25,16 +26,18 @@ detection:
     selection_powershell:
         CommandLine|contains:
             - 'Compress-Archive'
-    selection_path:
+    selection_sensitive_paths:
         CommandLine|contains:
             - 'Documents'
             - 'Desktop'
             - 'Users'
+    selection_sensitive_extensions:
+        CommandLine|contains:
             - '.txt'
             - '.doc'
             - '.xls'
             - '.pdf'
-    condition: (selection_tool or selection_powershell) and selection_path
+    condition: (selection_tool or selection_powershell) and (selection_sensitive_paths and selection_sensitive_extensions)
 falsepositives:
     - Legitimate file compression
     - Backup operations

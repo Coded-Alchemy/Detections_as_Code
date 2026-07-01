@@ -16,6 +16,7 @@ logsource:
     product: windows
     category: ps_script
     definition: 'Requirements: Script Block Logging must be enabled'
+    index: windows
 detection:
     selection_encoding:
         ScriptBlockText|contains:

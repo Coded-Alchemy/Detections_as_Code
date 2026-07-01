@@ -14,6 +14,7 @@ tags:
 logsource:
     category: process_creation
     product: windows
+    index: windows
 detection:
     selection_encoding:
         CommandLine|contains:
@@ -27,7 +28,7 @@ detection:
             - 'join'
             - 'replace'
             - 'split'
-        CommandLine|re: '.*[\+\^\%].*'
+        CommandLine|re: '.*[+^%].*'
     condition: selection_encoding or selection_obfuscation
 falsepositives:
     - Legitimate encoded scripts

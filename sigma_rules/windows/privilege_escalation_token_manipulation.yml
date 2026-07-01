@@ -14,6 +14,7 @@ tags:
 logsource:
     product: windows
     service: security
+    index: windows
 detection:
     selection_eventid:
         EventID: 4672
