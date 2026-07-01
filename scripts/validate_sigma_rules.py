@@ -4,15 +4,15 @@
 # ------------------------------------------------------------
 # Validates every Sigma rule under sigma_rules/ against the
 # required schema fields before conversion is attempted.
-# Catches malformed rules early so conversion errors are not
-# mistaken for logic problems.
 #
 # Checks enforced per rule:
 #   - Required top-level keys present
 #   - 'status' is a recognised value
 #   - 'level' is a recognised value
 #   - 'detection' block contains 'condition'
-#   - 'logsource' block is present and non-empty
+#   - 'logsource' block is present, non-empty, and contains
+#     an 'index' field — without it the generated SPL will
+#     scan every index in Splunk on every execution
 #
 # Usage:
 #   python3 scripts/validate_sigma_rules.py
@@ -22,11 +22,10 @@
 #   1 - One or more rules failed validation
 # ============================================================
 import sys
-import os
 import yaml
 from pathlib import Path
 
-RULES_DIR   = Path("sigma_rules")
+RULES_DIR    = Path("sigma_rules")
 VALID_STATUS = {"stable", "test", "experimental", "deprecated", "unsupported"}
 VALID_LEVEL  = {"critical", "high", "medium", "low", "informational"}
 
@@ -38,8 +37,8 @@ REQUIRED_KEYS = [
     "detection",
 ]
 
+
 def validate_rule(path: Path) -> list[str]:
-    """Return a list of validation error strings for the given rule file."""
     errors = []
 
     try:
@@ -59,16 +58,12 @@ def validate_rule(path: Path) -> list[str]:
     # Status
     status = rule.get("status", "")
     if status and status not in VALID_STATUS:
-        errors.append(
-            f"Unknown status '{status}'. Must be one of: {sorted(VALID_STATUS)}"
-        )
+        errors.append(f"Unknown status '{status}'. Must be one of: {sorted(VALID_STATUS)}")
 
     # Level
     level = rule.get("level", "")
     if level and level not in VALID_LEVEL:
-        errors.append(
-            f"Unknown level '{level}'. Must be one of: {sorted(VALID_LEVEL)}"
-        )
+        errors.append(f"Unknown level '{level}'. Must be one of: {sorted(VALID_LEVEL)}")
 
     # Detection block
     detection = rule.get("detection", {})
@@ -78,24 +73,36 @@ def validate_rule(path: Path) -> list[str]:
     else:
         errors.append("'detection' must be a mapping")
 
-    # Logsource block
+    # Logsource block — structural check
     logsource = rule.get("logsource", {})
     if not isinstance(logsource, dict) or not logsource:
         errors.append("'logsource' must be a non-empty mapping")
+        return errors
+
+    # Logsource block — index check
+    if not logsource.get("index"):
+        errors.append(
+            "'logsource' is missing an 'index' field. "
+            "Without it the generated SPL will scan every Splunk index. "
+            "Add 'index: wineventlog' (or the correct index) to the logsource block."
+        )
 
     return errors
 
 
 def main() -> int:
-    rule_files = sorted(RULES_DIR.rglob("*.yml"))
+    rule_files = sorted(
+        f for f in RULES_DIR.rglob("*.yml")
+        if not f.name.endswith(".tuning.yml")
+    )
 
     if not rule_files:
         print(f"ERROR: No Sigma rules found under '{RULES_DIR}'", file=sys.stderr)
         return 1
 
-    total   = len(rule_files)
-    passed  = 0
-    failed  = 0
+    total  = len(rule_files)
+    passed = 0
+    failed = 0
 
     print(f"Validating {total} Sigma rule(s)...\n")
 
