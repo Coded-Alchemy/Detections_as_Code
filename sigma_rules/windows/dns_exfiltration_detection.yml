@@ -21,9 +21,8 @@ detection:
             - 'TXT'
             - 'NULL'
             - 'MX'
-    filter:
-        query|count: '>100'
-    condition: selection | filter
+        query|count(query): '>100'
+    condition: selection
 timeframe: 5m
 falsepositives:
     - CDN traffic
