@@ -16,6 +16,7 @@ logsource:
     product: windows
     service: security
     definition: 'Requirements: Audit Other Object Access Events > Success'
+    index: windows
 detection:
     selection_eventid:
         EventID: 4698

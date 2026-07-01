@@ -9,6 +9,7 @@ logsource:
   # Windows Defender
   product: windows
   service: windefend
+  index: windows
 detection:
   selection:
     # The detection itself

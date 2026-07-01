@@ -19,6 +19,7 @@ tags:
 logsource:
     category: process_creation
     product: windows
+    index: windows
 detection:
     selection_execution:
         Image|endswith:

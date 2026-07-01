@@ -15,6 +15,7 @@ logsource:
     product: windows
     service: security
     definition: 'Requirements: Audit Registry must be enabled'
+    index: windows
 detection:
     selection_eventid:
         EventID: 4657

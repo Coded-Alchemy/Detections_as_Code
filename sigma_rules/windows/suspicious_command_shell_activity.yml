@@ -15,6 +15,7 @@ tags:
 logsource:
     category: process_creation
     product: windows
+    index: windows
 detection:
     selection_cmd:
         Image|endswith: '\cmd.exe'
