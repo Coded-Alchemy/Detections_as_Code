@@ -1,0 +1,32 @@
+# ============================================================
+# Pipeline: lab_index_mapping.yml
+# ------------------------------------------------------------
+# Reads the custom 'index' field from each Sigma rule's
+# logsource block and injects it as an index= condition in
+# the generated SPL.
+#
+# Rules declare their own index directly:
+#
+#   logsource:
+#     product: windows
+#     service: security
+#     index: wineventlog
+#
+# No centralised mapping table to maintain. Adding a new data
+# source means setting the correct index in the rule's
+# logsource block — nothing else needs to change.
+#
+# Usage:
+#   sigma convert --target splunk \
+#     --pipeline splunk_windows \
+#     --pipeline pipelines/lab_index_mapping.yml \
+#     sigma_rules/windows/my_rule.yml
+# ============================================================
+name: "Lab Index Mapping"
+priority: 25
+
+transformations:
+  - id: set_index_from_logsource
+    type: add_condition
+    conditions:
+      index: "{logsource.index}"
