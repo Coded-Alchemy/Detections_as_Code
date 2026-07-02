@@ -193,7 +193,7 @@ jobs:
         with:
           name: convert-diagnostics
           path: generated/convert_errors generated/convert-failures-summary.txt
-          if-no-files-found: false
+          if-no-files-found: warn
 
 # =============================================================================
 # JOB 5 — Terraform Init  (runs in parallel with convert)
