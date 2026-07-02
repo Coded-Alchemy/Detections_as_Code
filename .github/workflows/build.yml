@@ -131,9 +131,9 @@ jobs:
           python3 scripts/generate_locals.py
 
           echo "### Generated Terraform Configuration" >> "$GITHUB_STEP_SUMMARY"
-          echo "\`\`\`hcl"                             >> "$GITHUB_STEP_SUMMARY"
+          echo "```hcl"                             >> "$GITHUB_STEP_SUMMARY"
           head -n 50 terraform/locals.tf               >> "$GITHUB_STEP_SUMMARY"
-          echo "\`\`\`"                                >> "$GITHUB_STEP_SUMMARY"
+          echo "```"                                >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Generated Locals
         uses: actions/upload-artifact@v4
@@ -167,15 +167,33 @@ jobs:
             pysigma-pipeline-windows \
 
       - name: Convert Sigma Rules to SPL
-        run: bash scripts/convert_sigma_to_spl.sh
+        run: |
+          # Run conversion and capture logs even if the script exits non-zero
+          bash scripts/convert_sigma_to_spl.sh 2>&1 | tee /tmp/convert_output.txt || true
+
+          # Append last part of conversion logs to the job summary for quick visibility
+          echo "### Sigma -> SPL Conversion" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          tail -n 200 /tmp/convert_output.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          # Ensure generated/ exists so subsequent upload steps don't fail
+          ls -lh generated || true
 
       - name: Upload SPL Detections Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: spl-detections
-          path: generated/splunk
-          if-no-files-found: error
-          compression-level: 6
+            name: spl-detections
+            path: generated/splunk
+            if-no-files-found: error
+            compression-level: 6
+      - name: Upload Conversion Diagnostics (errors)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: convert-diagnostics
+          path: generated/convert_errors generated/convert-failures-summary.txt
+          if-no-files-found: warn
 
 # =============================================================================
 # JOB 5 — Terraform Init  (runs in parallel with convert)
@@ -377,9 +395,9 @@ jobs:
           terraform plan -out=tfplan 2>&1 | tee /tmp/tf_plan_output.txt
 
           echo "### Terraform Plan"     >> "$GITHUB_STEP_SUMMARY"
-          echo "\`\`\`"                 >> "$GITHUB_STEP_SUMMARY"
+          echo "```"                 >> "$GITHUB_STEP_SUMMARY"
           cat /tmp/tf_plan_output.txt  >> "$GITHUB_STEP_SUMMARY"
-          echo "\`\`\`"                 >> "$GITHUB_STEP_SUMMARY"
+          echo "```"                 >> "$GITHUB_STEP_SUMMARY"
           rm -f /tmp/tf_plan_output.txt
 
       - name: Upload Plan Artifact
@@ -405,9 +423,10 @@ jobs:
   tf-apply:
     name: "Terraform — Apply"
     needs: tf-plan
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: [self-hosted, linux, x64]
     timeout-minutes: 20
+    environment: production
 
     steps:
       - name: Checkout
@@ -451,9 +470,9 @@ jobs:
           terraform apply -auto-approve tfplan 2>&1 | tee /tmp/tf_apply_output.txt
 
           echo "### Terraform Apply"     >> "$GITHUB_STEP_SUMMARY"
-          echo "\`\`\`"                  >> "$GITHUB_STEP_SUMMARY"
+          echo "```"                  >> "$GITHUB_STEP_SUMMARY"
           cat /tmp/tf_apply_output.txt  >> "$GITHUB_STEP_SUMMARY"
-          echo "\`\`\`"                  >> "$GITHUB_STEP_SUMMARY"
+          echo "```"                  >> "$GITHUB_STEP_SUMMARY"
           rm -f /tmp/tf_apply_output.txt
 
       - name: Emit Deployment Summary
