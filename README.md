@@ -96,3 +96,5 @@ Key Benefits:
 This Detection-as-Code pipeline demonstrates modern security engineering practices and  
 DevSecOps principles highly valued in SOC environments.  
 
+
+
